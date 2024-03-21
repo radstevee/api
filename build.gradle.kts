@@ -24,9 +24,8 @@ dependencies {
     implementation("io.ktor:ktor-server-netty:$ktor_version")
     implementation("io.ktor:ktor-server-auth:$ktor_version")
 
-    implementation ("com.mysql:mysql-connector-j:8.2.+")
-
-    implementation ("org.slf4j:slf4j-simple:2.0.12")
+    implementation("com.mysql:mysql-connector-j:8.3.0")
+    implementation("org.slf4j:slf4j-simple:2.0.12")
 
     implementation("com.mojang:datafixerupper:6.0.6")
     implementation("dev.andante:codex:1.4.0")
@@ -52,7 +51,9 @@ java {
     withJavadocJar()
 }
 
-tasks.withType<Jar>() {
+val fatJar = task("fatJar", type = Jar::class) {
+    archiveBaseName = "${project.name}-fat"
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     manifest {
@@ -62,6 +63,8 @@ tasks.withType<Jar>() {
     configurations["compileClasspath"].forEach { file: File ->
         from(zipTree(file.absoluteFile))
     }
+
+    with(tasks["jar"] as CopySpec)
 }
 
 publishing {
