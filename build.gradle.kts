@@ -2,6 +2,7 @@
 
 plugins {
     kotlin("jvm") version "1.9.22"
+    `maven-publish`
 }
 
 group = "net.mcbrawls"
@@ -46,6 +47,11 @@ kotlin {
     }
 }
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 tasks.withType<Jar>() {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -55,5 +61,28 @@ tasks.withType<Jar>() {
 
     configurations["compileClasspath"].forEach { file: File ->
         from(zipTree(file.absoluteFile))
+    }
+}
+
+publishing {
+    publications {
+        register("mavenJava", MavenPublication::class) {
+            from(components["java"])
+        }
+    }
+
+    repositories {
+        val env = System.getenv()
+        val envUsername = env["MAVEN_USERNAME_ANDANTE"]
+        val envPassword = env["MAVEN_PASSWORD_ANDANTE"]
+        if (envUsername != null && envPassword != null) {
+            maven {
+                url = uri("https://maven.andante.dev/releases/")
+                credentials {
+                    username = envUsername
+                    password = envPassword
+                }
+            }
+        }
     }
 }
