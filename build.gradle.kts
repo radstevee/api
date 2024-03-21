@@ -1,5 +1,8 @@
 @file:Suppress("VulnerableLibrariesLocal", "LocalVariableName")
 
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.archivesName
+
+
 plugins {
     kotlin("jvm") version "1.9.22"
     `maven-publish`
@@ -7,6 +10,8 @@ plugins {
 
 group = "net.mcbrawls"
 version = "1.0-SNAPSHOT"
+
+archivesName = "$name-$version"
 
 repositories {
     mavenCentral()
