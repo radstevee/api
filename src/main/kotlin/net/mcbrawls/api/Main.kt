@@ -70,6 +70,10 @@ fun main() {
 
         // routes
         routing {
+            get("/") {
+                call.respond(HttpStatusCode.OK, "MC Brawls API")
+            }
+
             authenticate("auth-basic") {
                 get("/chat_statistics") {
                     call.respondText {
