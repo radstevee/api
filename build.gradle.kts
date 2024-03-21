@@ -25,6 +25,8 @@ dependencies {
 
     implementation ("com.mysql:mysql-connector-j:8.2.+")
 
+    implementation ("org.slf4j:slf4j-simple:2.0.12")
+
     implementation("com.mojang:datafixerupper:6.0.6")
     implementation("dev.andante:codex:1.4.0")
 }
@@ -38,8 +40,20 @@ kotlin {
 
     compilerOptions {
         freeCompilerArgs.addAll(
-            "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
-            "-Xopt-in=kotlinx.coroutines.DelicateCoroutinesApi",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-opt-in=kotlinx.coroutines.DelicateCoroutinesApi",
         )
+    }
+}
+
+tasks.withType<Jar>() {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes["Main-Class"] = "net.mcbrawls.api.MainKt"
+    }
+
+    configurations["compileClasspath"].forEach { file: File ->
+        from(zipTree(file.absoluteFile))
     }
 }
