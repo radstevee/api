@@ -42,7 +42,7 @@ fun main() {
     logger.info("Connected.")
 
     logger.info("Starting server")
-    embeddedServer(Netty, port = 8080) {
+    embeddedServer(Netty, port = 37612) {
         install(Authentication) {
             // authentication
             basic("auth-basic") {
