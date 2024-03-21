@@ -37,7 +37,7 @@ private val logger: Logger = LoggerFactory.getLogger("Main")
  */
 
 fun main() {
-    logger.info("Connecting to database")
+    logger.info("Connecting to database.")
     runBlocking { DatabaseController.connect() }
     logger.info("Connected.")
 
