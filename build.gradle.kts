@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "net.mcbrawls"
-version = "1.0.1"
+version = "1.0-SNAPSHOT"
 
 archivesName = "$name-$version"
 
@@ -30,10 +30,10 @@ dependencies {
     implementation("io.ktor:ktor-server-auth:$ktor_version")
 
     implementation("com.mysql:mysql-connector-j:8.3.0")
+    implementation("org.slf4j:slf4j-simple:2.0.12")
+
     implementation("com.mojang:datafixerupper:6.0.6")
     implementation("dev.andante:codex:1.4.0")
-
-    runtimeOnly("org.slf4j:slf4j-simple:2.0.12")
 }
 
 tasks.test {
