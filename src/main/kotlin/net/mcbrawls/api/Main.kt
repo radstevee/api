@@ -3,7 +3,10 @@ package net.mcbrawls.api
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
+import com.mojang.serialization.JsonOps
+import dev.andante.codex.encodeQuick
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
@@ -23,6 +26,7 @@ import kotlinx.coroutines.runBlocking
 import net.mcbrawls.api.database.CachedDatabaseValue
 import net.mcbrawls.api.database.DatabaseController
 import net.mcbrawls.api.database.PreparedStatementBuilder
+import net.mcbrawls.api.response.MessageCountResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -71,37 +75,39 @@ fun main() {
         // routes
         routing {
             get("/") {
-                call.respond(HttpStatusCode.OK, "MC Brawls API")
+                call.respond(HttpStatusCode.OK, "MC Brawls API https://api.mcbrawls.net")
             }
 
             authenticate("auth-basic") {
                 get("/chat_statistics") {
-                    call.respondText {
-                        // execute query
-                        val result = DatabaseController.executeStatement {
-                            executeQuery(
-                                """
+                    // execute query
+                    val result = DatabaseController.executeStatement {
+                        executeQuery(
+                            """
                                     SELECT
                                         SUM(chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
                                         SUM(chat_result = 'filtered_profanity') AS filtered_message_count
                                     FROM ChatLogs
                                 """.trimIndent()
-                            )
-                        }
-
-                        // obtain results
-                        result.next()
-                        val localMessageCount = result.getInt("local_message_count")
-                        val filteredMessageCount = result.getInt("filtered_message_count")
-
-                        // compile json
-                        jsonObject {
-                            jsonObject("message_counts") {
-                                int("local", localMessageCount)
-                                int("filtered", filteredMessageCount)
-                            }
-                        }.toJsonString()
+                        )
                     }
+
+                    // obtain results
+                    result.next()
+                    val localMessageCount = result.getInt("local_message_count")
+                    val filteredMessageCount = result.getInt("filtered_message_count")
+
+                    // compile
+                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
+                    val json = MessageCountResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response)
+
+                    if (json == null) {
+                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
+                        return@get
+                    }
+
+                    // respond
+                    call.respondJson(json)
                 }
 
                 get("/chat_statistics/{uuid}") {
@@ -114,39 +120,41 @@ fun main() {
                         return@get
                     }
 
-                    call.respondText {
-                        // execute query
-                        val result = DatabaseController.executePrepared(
-                            {
-                                prepareStatement(
-                                    """
+                    // execute query
+                    val result = DatabaseController.executePrepared(
+                        {
+                            prepareStatement(
+                                """
                                         SELECT
                                             SUM(player_id = ? AND chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
                                             SUM(player_id = ? AND chat_result = 'filtered_profanity') AS filtered_message_count
                                         FROM ChatLogs
                                     """.trimIndent()
-                                )
-                            },
-                            { builder ->
-                                builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
-                                builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
-                            },
-                            PreparedStatement::executeQuery
-                        )
+                            )
+                        },
+                        { builder ->
+                            builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
+                            builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
+                        },
+                        PreparedStatement::executeQuery
+                    )
 
-                        // obtain results
-                        result.next()
-                        val localMessageCount = result.getInt("local_message_count")
-                        val filteredMessageCount = result.getInt("filtered_message_count")
+                    // obtain results
+                    result.next()
+                    val localMessageCount = result.getInt("local_message_count")
+                    val filteredMessageCount = result.getInt("filtered_message_count")
 
-                        // compile json
-                        jsonObject {
-                            jsonObject("message_counts") {
-                                int("local", localMessageCount)
-                                int("filtered", filteredMessageCount)
-                            }
-                        }.toJsonString()
+                    // compile
+                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
+                    val json = MessageCountResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response)
+
+                    if (json == null) {
+                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
+                        return@get
                     }
+
+                    // respond
+                    call.respondJson(json)
                 }
             }
         }
@@ -165,7 +173,11 @@ fun file(path: String): File {
     return Path.of(path).toFile()
 }
 
-fun JsonElement.toJsonString(prettyPrint: Boolean): String {
+suspend fun ApplicationCall.respondJson(element: JsonElement) {
+    respondText(element.toJsonString())
+}
+
+fun JsonElement.toJsonString(prettyPrint: Boolean = false): String {
     val gson = GsonBuilder()
     if (prettyPrint) {
         gson.setPrettyPrinting()
