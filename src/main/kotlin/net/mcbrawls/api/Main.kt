@@ -25,14 +25,17 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import net.mcbrawls.api.database.CachedDatabaseValue
 import net.mcbrawls.api.database.DatabaseController
+import net.mcbrawls.api.database.DatabaseController.executeQuery
 import net.mcbrawls.api.database.PreparedStatementBuilder
 import net.mcbrawls.api.response.MessageCountResponse
+import net.mcbrawls.api.response.TotalExperienceResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Path
 import java.sql.PreparedStatement
 import java.util.UUID
+import kotlin.math.exp
 
 private val logger: Logger = LoggerFactory.getLogger("Main")
 
@@ -79,16 +82,107 @@ fun main() {
             }
 
             authenticate("auth-basic") {
+                get("/experience") {
+                    // execute query
+                    val result = DatabaseController.executeStatement {
+                        executeQuery(
+                            """
+                                SELECT player_id, SUM(experience_amount) AS total_experience
+                                FROM StatisticEvents
+                                GROUP BY player_id
+                                ORDER BY total_experience DESC
+                            """.trimIndent()
+                        )
+                    }
+
+                    // obtain results
+                    val uuidToExperienceMap: Map<UUID, Int> = buildMap {
+                        while (result.next()) {
+                            try {
+                                val playerId = UUID.fromString(result.getString("player_id"))
+                                val totalExperience = result.getInt("total_experience")
+                                this[playerId] = totalExperience
+                            } catch (_: Exception) {
+                            }
+                        }
+                    }
+
+                    // compile
+                    val responses = uuidToExperienceMap.map { (id, xp) -> TotalExperienceResponse(id, xp) }
+                    val json = TotalExperienceResponse.CODEC.listOf().encodeQuick(JsonOps.INSTANCE, responses)
+
+                    if (json == null) {
+                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
+                        return@get
+                    }
+
+                    // respond
+                    call.respondJson(json)
+                }
+
+                get("/experience/{uuid}") {
+                    val uuidString = call.parameters["uuid"]
+
+                    val uuid = try {
+                        UUID.fromString(uuidString)
+                    } catch (exception: IllegalArgumentException) {
+                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: $uuidString")
+                        return@get
+                    }
+
+                    // execute query
+                    val result = DatabaseController.executePrepared(
+                        {
+                            prepareStatement(
+                                """
+                                SELECT SUM(experience_amount) AS total_experience
+                                FROM StatisticEvents
+                                WHERE player_id = ?
+                            """.trimIndent()
+                            )
+                        },
+                        { builder ->
+                            builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
+                        },
+                        PreparedStatement::executeQuery
+                    )
+
+                    // obtain results
+                    val experience = if (result.next()) {
+                        try {
+                            result.getInt("total_experience")
+                        } catch (exception: Exception) {
+                            call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
+                            return@get
+                        }
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, "Player not found: $uuid")
+                        return@get
+                    }
+
+                    // compile
+                    val response = TotalExperienceResponse(uuid, experience)
+                    val json = TotalExperienceResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response)
+
+                    if (json == null) {
+                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
+                        return@get
+                    }
+
+                    // respond
+                    call.respondJson(json)
+                }
+
                 get("/chat_statistics") {
                     // execute query
                     val result = DatabaseController.executeStatement {
                         executeQuery(
                             """
-                                    SELECT
-                                        SUM(chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
-                                        SUM(chat_result = 'filtered_profanity') AS filtered_message_count
-                                    FROM ChatLogs
-                                """.trimIndent()
+                                SELECT
+                                    SUM(chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
+                                    SUM(chat_result = 'filtered_profanity') AS filtered_message_count
+                                FROM ChatLogs
+                            """.trimIndent()
                         )
                     }
 
@@ -125,11 +219,11 @@ fun main() {
                         {
                             prepareStatement(
                                 """
-                                        SELECT
-                                            SUM(player_id = ? AND chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
-                                            SUM(player_id = ? AND chat_result = 'filtered_profanity') AS filtered_message_count
-                                        FROM ChatLogs
-                                    """.trimIndent()
+                                    SELECT
+                                        SUM(player_id = ? AND chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
+                                        SUM(player_id = ? AND chat_result = 'filtered_profanity') AS filtered_message_count
+                                    FROM ChatLogs
+                                """.trimIndent()
                             )
                         },
                         { builder ->
