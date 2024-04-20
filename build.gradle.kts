@@ -33,7 +33,7 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.12")
 
     implementation("com.mojang:datafixerupper:6.0.6")
-    implementation("dev.andante:codex:1.4.0")
+    implementation("dev.andante:codex:1.5.0")
 }
 
 tasks.test {
