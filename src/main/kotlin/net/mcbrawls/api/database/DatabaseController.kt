@@ -19,7 +19,7 @@ object DatabaseController : DatabaseExecutable {
 
     private const val DATABASE_CONFIG_PATH = "database_config.json"
 
-    private var database: AuthenticatableDatabase = loadConfiguration()
+    var database: AuthenticatableDatabase = loadConfiguration()
 
     init {
         runAsync { connect() }
