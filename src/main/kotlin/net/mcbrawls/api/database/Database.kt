@@ -65,4 +65,11 @@ abstract class Database : DatabaseExecutable {
     fun isConnectionValid(timeout: Int): Boolean {
         return activeConnection?.isValid(timeout) ?: false
     }
+
+    /**
+     * Sets the connection's auto commit status.
+     */
+    fun autoCommit(autoCommit: Boolean = true) {
+        activeConnection?.autoCommit = autoCommit
+    }
 }
