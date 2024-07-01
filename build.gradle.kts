@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "net.mcbrawls"
-version = "1.1.1"
+version = "1.1.2"
 
 archivesName = "$name-$version"
 

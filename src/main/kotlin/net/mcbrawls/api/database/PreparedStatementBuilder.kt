@@ -34,6 +34,13 @@ data class PreparedStatementBuilder(
         parameterIndex++
     }
 
+    /**
+     * Adds the current parameters to the statement's batch.
+     */
+    fun addBatch() {
+        statement.addBatch()
+    }
+
     companion object {
         /**
          * Creates a prepared statement builder for this prepared statement.
