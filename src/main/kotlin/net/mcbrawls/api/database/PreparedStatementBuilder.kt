@@ -39,6 +39,7 @@ data class PreparedStatementBuilder(
      */
     fun addBatch() {
         statement.addBatch()
+        parameterIndex = 1
     }
 
     companion object {
