@@ -9,7 +9,7 @@ abstract class Database : DatabaseExecutable {
     /**
      * The current connection of the database.
      */
-    private var activeConnection: Connection? = null
+    var activeConnection: Connection? = null
 
     /**
      * Creates a connection to the database.
