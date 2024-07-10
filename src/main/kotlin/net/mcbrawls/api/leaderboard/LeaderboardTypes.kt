@@ -23,4 +23,11 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
             executeQuery("SELECT player_id, COUNT(player_id) value FROM StatisticEvents WHERE game_type = 'dodgebolt' AND cause_id = 'round_win' GROUP BY player_id ORDER BY value DESC LIMIT 10")
         }
     )
+
+    val OLD_RISE_POWDER_FLOORS = register(
+        "old_rise_powder_floors",
+        LeaderboardType("Rise Powder Floors Survived") {
+            executeQuery("SELECT player_id, COUNT(player_id) value FROM StatisticEvents WHERE game_type = 'old_rise' AND cause_id = 'powder_floors' GROUP BY player_id ORDER BY value DESC LIMIT 10")
+        }
+    )
 }
