@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "net.mcbrawls"
-version = "1.1.5"
+version = "1.2.0"
 
 archivesName = "$name-$version"
 
@@ -18,6 +18,7 @@ repositories {
     maven("https://maven.fabricmc.net/")
     maven("https://libraries.minecraft.net/")
     maven("https://maven.andante.dev/releases/")
+    maven("https://libraries.minecraft.net/")
 }
 
 dependencies {
@@ -33,6 +34,7 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.12")
 
     implementation("com.mojang:datafixerupper:7.0.14")
+    implementation("com.mojang:brigadier:1.0.18")
     implementation("dev.andante:codex:1.5.0")
 }
 
