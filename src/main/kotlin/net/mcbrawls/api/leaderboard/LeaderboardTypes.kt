@@ -13,7 +13,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
     val ROCKETS_FIRED = register(
         "rockets_fired",
         LeaderboardType("Rockets Fired Leaderboard") {
-            executeQuery("SELECT player_id, COUNT(player_id) value FROM StatisticEvents WHERE game_type = 'rocket_spleef' AND cause_id = 'rockets_fired' GROUP BY player_id ORDER BY value DESC LIMIT 10")
+            executeQuery("SELECT player_id, COUNT(player_id) value FROM StatisticEvents WHERE game_type = 'rocket_spleef' AND cause_id = 'rocket_fired' GROUP BY player_id ORDER BY value DESC LIMIT 10")
         }
     )
 
