@@ -30,4 +30,11 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
             executeQuery("SELECT player_id, COUNT(player_id) value FROM StatisticEvents WHERE game_type = 'old_rise' AND cause_id = 'powder_floors' GROUP BY player_id ORDER BY value DESC LIMIT 10")
         }
     )
+
+    val DODGEBOLT_HIT_RATIO = register(
+        "dodgebolt_hit_ratio",
+        LeaderboardType("Dodgebolt Arrow Hit Ratio (Shots Hit / Shots Fired)") {
+            executeQuery("SELECT player_id, COUNT(CASE WHEN cause_id = 'arrow_hit' THEN 1 END) AS shots_hit, COUNT(CASE WHEN cause_id = 'arrow_fired' THEN 1 END) AS shots_fired, COALESCE(COUNT(CASE WHEN cause_id = 'arrow_hit' THEN 1 END) / NULLIF(COUNT(CASE WHEN cause_id = 'arrow_fired' THEN 1 END), 0), 0) * 100 AS value FROM StatisticEvents WHERE game_type = 'dodgebolt' GROUP BY player_id ORDER BY value DESC LIMIT 10")
+        }
+    )
 }
