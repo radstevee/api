@@ -3,6 +3,7 @@ package net.mcbrawls.api
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
+import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import com.mojang.serialization.JsonOps
 import dev.andante.codex.encodeQuick
 import io.ktor.http.HttpStatusCode
@@ -26,6 +27,8 @@ import kotlinx.coroutines.runBlocking
 import net.mcbrawls.api.database.CachedDatabaseValue
 import net.mcbrawls.api.database.DatabaseController
 import net.mcbrawls.api.database.PreparedStatementBuilder
+import net.mcbrawls.api.leaderboard.LeaderboardTypes
+import net.mcbrawls.api.response.LeaderboardResponse
 import net.mcbrawls.api.response.MessageCountResponse
 import net.mcbrawls.api.response.TotalExperienceResponse
 import org.slf4j.Logger
@@ -246,6 +249,37 @@ fun main() {
                     }
 
                     // respond
+                    call.respondJson(json)
+                }
+
+                get("/leaderboards/{board}") {
+                    val boardName = call.parameters["board"]
+                    val boardType = LeaderboardTypes[boardName.toString()] ?: run {
+                        call.respond(HttpStatusCode.BadRequest, "Not a valid leaderboard name: $boardName")
+                        return@get
+                    }
+
+                    val result = DatabaseController.executeStatement(boardType.resultProvider)
+
+                    val results = buildList {
+                        while(result.next()) {
+                            add(LeaderboardResponse(
+                                runCatching { UUID.fromString(result.getString("player_id")) }.getOrElse {
+                                    call.respond(HttpStatusCode.InternalServerError, "An exception occurred on the server")
+                                    return@get
+                                },
+                                size + 1,
+                                result.getInt("value")
+                            ))
+                        }
+                    }
+
+                    val json = LeaderboardResponse.CODEC.listOf().encodeQuick(JsonOps.INSTANCE, results)
+                    if (json == null) {
+                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
+                        return@get
+                    }
+
                     call.respondJson(json)
                 }
             }
