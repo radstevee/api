@@ -1,8 +1,5 @@
 @file:Suppress("VulnerableLibrariesLocal", "LocalVariableName")
 
-//import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.archivesName
-
-
 plugins {
     kotlin("jvm") version "2.0.0"
     `maven-publish`
@@ -11,8 +8,6 @@ plugins {
 
 group = "net.mcbrawls"
 version = "1.2.3"
-
-//archivesName = "$name-$version"
 
 repositories {
     mavenCentral()
@@ -46,12 +41,12 @@ tasks.test {
 kotlin {
     jvmToolchain(17)
 
-    /* compilerOptions {
+    compilerOptions {
         freeCompilerArgs.addAll(
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
             "-opt-in=kotlinx.coroutines.DelicateCoroutinesApi",
         )
-    } */
+    }
 }
 
 java {
