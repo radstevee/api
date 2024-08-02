@@ -13,10 +13,12 @@ data class LeaderboardResponse(
      * The uuid of the associated player.
      */
     val playerId: UUID,
+
     /**
      * The position of the associated player on the leaderboard.
      */
     val position: Int,
+
     /**
      * The value on the leaderboard.
      */
