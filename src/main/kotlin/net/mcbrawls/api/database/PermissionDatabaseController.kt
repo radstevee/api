@@ -22,7 +22,7 @@ object PermissionDatabaseController : DatabaseExecutable {
     init {
         runAsync { connect() }
 
-        thread(name = "Brawls Database Heartbeat") {
+        thread(name = "LuckPerms Database Heartbeat") {
             // start heartbeat
             runAsync {
                 while (true) {
