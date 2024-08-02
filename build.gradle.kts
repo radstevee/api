@@ -1,17 +1,13 @@
 @file:Suppress("VulnerableLibrariesLocal", "LocalVariableName")
 
-import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.archivesName
-
-
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "2.0.0"
     `maven-publish`
+    application
 }
 
 group = "net.mcbrawls"
 version = "1.2.3"
-
-archivesName = "$name-$version"
 
 repositories {
     mavenCentral()
@@ -72,6 +68,10 @@ val fatJar = task("fatJar", type = Jar::class) {
     }
 
     with(tasks["jar"] as CopySpec)
+}
+
+application {
+    mainClass = "net.mcbrawls.api.MainKt"
 }
 
 publishing {
