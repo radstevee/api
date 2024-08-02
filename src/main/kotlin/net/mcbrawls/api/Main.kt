@@ -3,7 +3,6 @@ package net.mcbrawls.api
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
-import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import com.mojang.serialization.JsonOps
 import dev.andante.codex.encodeQuick
 import io.ktor.http.HttpStatusCode
