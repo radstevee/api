@@ -27,8 +27,6 @@ import net.mcbrawls.api.database.CachedDatabaseValue
 import net.mcbrawls.api.database.DatabaseController
 import net.mcbrawls.api.database.PermissionDatabaseController
 import net.mcbrawls.api.database.PreparedStatementBuilder
-import net.mcbrawls.api.database.PreparedStatementBuilder.Companion.createBuilder
-import net.mcbrawls.api.database.PreparedStatementBuilder.Companion.setStatementUuid
 import net.mcbrawls.api.leaderboard.LeaderboardTypes
 import net.mcbrawls.api.response.LeaderboardResponse
 import net.mcbrawls.api.response.MessageCountResponse
