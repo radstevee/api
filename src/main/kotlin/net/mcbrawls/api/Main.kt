@@ -5,6 +5,12 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.mojang.serialization.JsonOps
 import dev.andante.codex.encodeQuick
+import io.github.smiley4.ktorswaggerui.SwaggerUI
+import io.github.smiley4.ktorswaggerui.data.AuthScheme
+import io.github.smiley4.ktorswaggerui.data.AuthType
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.routing.openApiSpec
+import io.github.smiley4.ktorswaggerui.routing.swaggerUI
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
@@ -18,6 +24,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
+import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
@@ -76,14 +83,66 @@ fun main() {
                 }
             }
         }
+
+        install(SwaggerUI) {
+            swagger {
+                withCredentials = true
+                onlineSpecValidator()
+            }
+
+            info {
+                title = "MC Brawls API"
+                version = this::class.java.`package`.implementationVersion // somehow this works
+                description = "Official API for the MC Brawls Minecraft server."
+            }
+
+            server {
+                url = "https://api.mcbrawls.net"
+                description = "MC Brawls API"
+            }
+
+            security {
+                securityScheme("BasicAuth") {
+                    type = AuthType.HTTP
+                    scheme = AuthScheme.BASIC
+                }
+
+                defaultSecuritySchemeNames("BasicAuth")
+                defaultUnauthorizedResponse {
+                    description = "Invalid API credentials"
+                }
+            }
+        }
+
         // routes
         routing {
+            route("api.json") {
+                openApiSpec()
+            }
+
+            route("docs") {
+                swaggerUI("/api.json")
+            }
+
             get("/") {
-                call.respond(HttpStatusCode.OK, "MC Brawls API https://api.mcbrawls.net")
+                call.respond(HttpStatusCode.OK, "MC Brawls API https://api.mcbrawls.net - Docs: https://api.mcbrawls.net/docs")
             }
 
             authenticate("auth-basic") {
-                get("/experience") {
+                get("/experience", {
+                    description = "Gets the experience of every player who has played on MC Brawls."
+
+                    response {
+                        HttpStatusCode.OK to {
+                            description = "Successful request."
+                            body<List<TotalExperienceResponse>>()
+                        }
+
+                        HttpStatusCode.InternalServerError to {
+                            description = "An unexpected error happened on the server."
+                        }
+                    }
+                }) {
                     // execute query
                     val result = DatabaseController.executeStatement {
                         executeQuery(
@@ -118,7 +177,23 @@ fun main() {
                     call.respondJson(json)
                 }
 
-                get("/experience/{uuid}") {
+                get("/experience/{uuid}", {
+                    description = "Gets the total experience for the specified player UUID."
+                    request {
+                        pathParameter<String>("uuid")
+                    }
+
+                    response {
+                        HttpStatusCode.OK to {
+                            description = "Successful request."
+                            body<TotalExperienceResponse>()
+                        }
+
+                        HttpStatusCode.InternalServerError to {
+                            description = "An unexpected error happened on the server."
+                        }
+                    }
+                }) {
                     val uuidString = call.parameters["uuid"]
                     val uuid = try {
                         UUID.fromString(uuidString)
@@ -166,7 +241,20 @@ fun main() {
                     call.respondJson(json)
                 }
 
-                get("/chat_statistics") {
+                get("/chat_statistics", {
+                    description = "Gets chat statistics for all players who have played on MC Brawls."
+
+                    response {
+                        HttpStatusCode.OK to {
+                            description = "Successful request."
+                            body<List<MessageCountResponse>>()
+                        }
+
+                        HttpStatusCode.InternalServerError to {
+                            description = "An unexpected error happened on the server."
+                        }
+                    }
+                }) {
                     // execute query
                     val result = DatabaseController.executeStatement {
                         executeQuery(
@@ -194,7 +282,24 @@ fun main() {
                     call.respondJson(json)
                 }
 
-                get("/chat_statistics/{uuid}") {
+                get("/chat_statistics/{uuid}", {
+                    description = "Gets chat statistics for the specified player UUID."
+
+                    request {
+                        pathParameter<String>("uuid")
+                    }
+
+                    response {
+                        HttpStatusCode.OK to {
+                            description = "Successful request."
+                            body<MessageCountResponse>()
+                        }
+
+                        HttpStatusCode.InternalServerError to {
+                            description = "An unexpected error happened on the server."
+                        }
+                    }
+                }) {
                     val uuidString = call.parameters["uuid"]
                     val uuid = try {
                         UUID.fromString(uuidString)
@@ -236,7 +341,26 @@ fun main() {
                     call.respondJson(json)
                 }
 
-                get("/leaderboards/{board}") {
+                get("/leaderboards/{board}", {
+                    description = "Retrieves the leaderboard for the given leaderboard type."
+
+                    request {
+                        pathParameter<String>("board") {
+                            description = "The type of leaderboard. This can be rockets_fired, total_experience, dodgebolt_rounds_won, old_rise_powder_floors and dodgebolt_hit_ratio"
+                        }
+                    }
+
+                    response {
+                        HttpStatusCode.OK to {
+                            description = "Successful request."
+                            body<List<LeaderboardResponse>>()
+                        }
+
+                        HttpStatusCode.InternalServerError to {
+                            description = "An unexpected error happened on the server."
+                        }
+                    }
+                }) {
                     val boardName = call.parameters["board"]
                     val boardType = LeaderboardTypes[boardName.toString()] ?: run {
                         call.respond(HttpStatusCode.BadRequest, "Not a valid leaderboard name: $boardName")
