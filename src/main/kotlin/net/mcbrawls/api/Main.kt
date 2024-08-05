@@ -389,8 +389,24 @@ fun main() {
                     call.respondJson(json)
                 }
 
-                get("/profile/{playerId}") {
-                    val playerId = runCatching { call.parameters["playerId"]?.let(UUID::fromString) }.getOrNull() ?: run {
+                get("/profile/{uuid}", {
+                    description = "Gets some basic info about the players profile."
+                    request {
+                        pathParameter<String>("uuid")
+                    }
+
+                    response {
+                        HttpStatusCode.OK to {
+                            description = "Successful request."
+                            body<ProfileResponse>()
+                        }
+
+                        HttpStatusCode.InternalServerError to {
+                            description = "An unexpected error happened on the server."
+                        }
+                    }
+                }) {
+                    val playerId = runCatching { call.parameters["uuid"]?.let(UUID::fromString) }.getOrNull() ?: run {
                         call.respond(HttpStatusCode.BadRequest, "Invalid specified player UUID!")
                         return@get
                     }
