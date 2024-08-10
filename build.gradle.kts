@@ -55,7 +55,7 @@ java {
 }
 
 val fatJar = task("fatJar", type = Jar::class) {
-    archiveBaseName.set("${project.name}-fat")
+    archiveBaseName = "${project.name}-fat"
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -68,9 +68,12 @@ val fatJar = task("fatJar", type = Jar::class) {
         configurations.runtimeClasspath.get().map { file ->
             if (file.isDirectory) file else zipTree(file)
         }
-    })
+    }) {
+        // Exclude signature files from META-INF directory
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+    }
 
-    with(tasks.named("jar").get() as CopySpec)
+    with(tasks["jar"] as CopySpec)
 }
 
 publishing {
