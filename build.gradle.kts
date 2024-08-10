@@ -69,8 +69,8 @@ val fatJar = task("fatJar", type = Jar::class) {
             if (file.isDirectory) file else zipTree(file)
         }
     }) {
-        // Exclude signature files from META-INF directory
-        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+        // Exclude signature and checksum files from META-INF directory
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/*.MF")
     }
 
     with(tasks["jar"] as CopySpec)
