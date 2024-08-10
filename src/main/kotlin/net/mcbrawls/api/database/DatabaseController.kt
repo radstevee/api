@@ -99,7 +99,8 @@ object DatabaseController : DatabaseExecutable {
         val address: String,
         val database: String,
         val user: String,
-        val password: String
+        val password: String,
+        val permissionDatabase: String,
     ) {
         companion object {
             /**
@@ -110,7 +111,8 @@ object DatabaseController : DatabaseExecutable {
                     Codec.STRING.fieldOf("address").forGetter(ConnectionInfo::address),
                     Codec.STRING.fieldOf("database").forGetter(ConnectionInfo::database),
                     Codec.STRING.fieldOf("user").forGetter(ConnectionInfo::user),
-                    Codec.STRING.fieldOf("password").forGetter(ConnectionInfo::password)
+                    Codec.STRING.fieldOf("password").forGetter(ConnectionInfo::password),
+                    Codec.STRING.fieldOf("permission_database").forGetter(ConnectionInfo::permissionDatabase)
                 ).apply(instance, DatabaseController::ConnectionInfo)
             }
         }
