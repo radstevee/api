@@ -24,9 +24,7 @@ dependencies {
     implementation("io.ktor:ktor-server-core:$ktor_version")
     implementation("io.ktor:ktor-server-netty:$ktor_version")
     implementation("io.ktor:ktor-server-auth:$ktor_version")
-
     implementation("io.github.smiley4:ktor-swagger-ui:3.2.0")
-    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 
     implementation("com.mysql:mysql-connector-j:8.3.0")
     implementation("org.slf4j:slf4j-simple:2.0.12")
@@ -57,7 +55,7 @@ java {
 }
 
 val fatJar = task("fatJar", type = Jar::class) {
-    archiveBaseName = "${project.name}-fat"
+    archiveBaseName.set("${project.name}-fat")
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -65,11 +63,14 @@ val fatJar = task("fatJar", type = Jar::class) {
         attributes["Main-Class"] = "net.mcbrawls.api.MainKt"
     }
 
-    configurations["compileClasspath"].forEach { file: File ->
-        from(zipTree(file.absoluteFile))
-    }
+    // Include all dependencies, including transitive ones, from runtimeClasspath
+    from({
+        configurations.runtimeClasspath.get().map { file ->
+            if (file.isDirectory) file else zipTree(file)
+        }
+    })
 
-    with(tasks["jar"] as CopySpec)
+    with(tasks.named("jar").get() as CopySpec)
 }
 
 publishing {
