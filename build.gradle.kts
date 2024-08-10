@@ -24,7 +24,9 @@ dependencies {
     implementation("io.ktor:ktor-server-core:$ktor_version")
     implementation("io.ktor:ktor-server-netty:$ktor_version")
     implementation("io.ktor:ktor-server-auth:$ktor_version")
+
     implementation("io.github.smiley4:ktor-swagger-ui:3.2.0")
+    implementation("io.github.oshai:kotlin-logging-jvm:5.1.4")
 
     implementation("com.mysql:mysql-connector-j:8.3.0")
     implementation("org.slf4j:slf4j-simple:2.0.12")
