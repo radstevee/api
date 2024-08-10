@@ -13,7 +13,7 @@ import kotlin.concurrent.thread
  * Manages the remote LuckPerms MySQL database.
  */
 object PermissionDatabaseController : DatabaseExecutable {
-    private val logger: Logger = LoggerFactory.getLogger("Database Controller")
+    private val logger: Logger = LoggerFactory.getLogger("Permissions Database Controller")
 
     private const val DATABASE_CONFIG_PATH = "database_config.json"
 
@@ -22,7 +22,7 @@ object PermissionDatabaseController : DatabaseExecutable {
     init {
         runAsync { connect() }
 
-        thread(name = "LuckPerms Database Heartbeat") {
+        thread(name = "Permissions Database Heartbeat") {
             // start heartbeat
             runAsync {
                 while (true) {
@@ -39,14 +39,14 @@ object PermissionDatabaseController : DatabaseExecutable {
     private suspend fun connectionHeartbeat() {
         // check 1 second timeout
         if (!database.isConnectionValid(3)) {
-            logger.warn("No database connection found. Attempting to connect to the Brawls central database.")
+            logger.warn("No permissions database connection found. Attempting to connect to the Brawls permissions database.")
 
             // try reconnect
             try {
                 database.connect()
-                logger.info("Connected to Brawls central database.")
+                logger.info("Connected to Brawls permissions database.")
             } catch (exception: Exception) {
-                logger.error("Something went wrong connecting to the database", exception)
+                logger.error("Something went wrong connecting to the permissions database", exception)
             }
         }
     }
@@ -67,13 +67,13 @@ object PermissionDatabaseController : DatabaseExecutable {
                 connectionInfo.password
             ).also { database = it }
         } catch (exception: Exception) {
-            logger.error("Could not load database information", exception)
+            logger.error("Could not load permissions database information", exception)
             throw exception
         }
     }
 
     override suspend fun <T> execute(action: (Connection) -> T): T {
-        return database.execute(action) ?: throw NullPointerException("Database was null: $this")
+        return database.execute(action) ?: throw NullPointerException("Permissions database was null: $this")
     }
 
     /**
