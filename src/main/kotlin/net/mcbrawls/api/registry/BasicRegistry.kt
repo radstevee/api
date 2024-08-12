@@ -2,6 +2,7 @@ package net.mcbrawls.api.registry
 
 import com.mojang.brigadier.suggestion.Suggestions
 import com.mojang.brigadier.suggestion.SuggestionsBuilder
+import com.mojang.serialization.Codec
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 
@@ -28,6 +29,11 @@ open class BasicRegistry<T : Any>(
      * The default value of this registry.
      */
     open val defaultValue: T? = null
+
+    /**
+     * The codec for this registry.
+     */
+    val codec: Codec<T> = Codec.STRING.xmap(::get, ::get)
 
     /**
      * Registers [entry] to the registry under [key].

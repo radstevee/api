@@ -32,6 +32,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
+    implementation("com.mojang:datafixerupper:7.0.14")
     implementation("com.mojang:brigadier:1.0.18")
 }
 
