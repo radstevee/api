@@ -1,6 +1,8 @@
 package net.mcbrawls.api.database
 
-import com.google.gson.JsonElement
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import java.sql.PreparedStatement
 import java.util.UUID
 
@@ -62,11 +64,11 @@ data class PreparedStatementBuilder(
         /**
          * Sets the value of the designated parameter to the given JSON element.
          */
-        fun PreparedStatement.setJson(parameterIndex: Int, json: JsonElement) {
-            setString(parameterIndex, json.toString())
+        fun PreparedStatement.setJson(parameterIndex: Int, json: Any) {
+            setString(parameterIndex, Json.encodeToString(json))
         }
 
-        fun setStatementJson(statement: PreparedStatement, parameterIndex: Int, json: JsonElement) {
+        fun setStatementJson(statement: PreparedStatement, parameterIndex: Int, json: Any) {
             statement.setJson(parameterIndex, json)
         }
 

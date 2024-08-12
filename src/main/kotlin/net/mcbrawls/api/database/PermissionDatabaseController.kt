@@ -1,9 +1,8 @@
 package net.mcbrawls.api.database
 
-import com.mojang.serialization.JsonOps
+import kotlinx.serialization.json.Json
 import net.mcbrawls.api.file
 import net.mcbrawls.api.runAsync
-import net.mcbrawls.api.toJson
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -57,8 +56,8 @@ object PermissionDatabaseController : DatabaseExecutable {
     fun loadConfiguration(): AuthenticatableDatabase {
         val file = file(DATABASE_CONFIG_PATH)
         try {
-            val json = file.toJson()
-            val connectionInfo = DatabaseController.ConnectionInfo.CODEC.decode(JsonOps.INSTANCE, json).result().orElseThrow().first
+            val json = file.readText()
+            val connectionInfo = Json.decodeFromString<DatabaseController.ConnectionInfo>(json)
             return AuthenticatableDatabase(
                 connectionInfo.address,
                 connectionInfo.permissionDatabase,

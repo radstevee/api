@@ -2,6 +2,7 @@
 
 plugins {
     kotlin("jvm") version "2.0.0"
+    kotlin("plugin.serialization") version "2.0.0"
     `maven-publish`
 }
 
@@ -29,9 +30,10 @@ dependencies {
     implementation("com.mysql:mysql-connector-j:8.3.0")
     implementation("org.slf4j:slf4j-simple:2.0.12")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+
     implementation("com.mojang:datafixerupper:7.0.14")
     implementation("com.mojang:brigadier:1.0.18")
-    implementation("dev.andante:codex:1.5.0")
 }
 
 tasks.test {

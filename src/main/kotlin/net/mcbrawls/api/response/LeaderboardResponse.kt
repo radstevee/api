@@ -1,18 +1,17 @@
 package net.mcbrawls.api.response
 
-import com.mojang.serialization.Codec
-import com.mojang.serialization.codecs.RecordCodecBuilder
-import net.mcbrawls.api.CustomCodecs
-import java.util.UUID
+import kotlinx.serialization.Serializable
+import net.mcbrawls.api.UID
 
 /**
  * A response for leaderboard-related queries.
  */
+@Serializable
 data class LeaderboardResponse(
     /**
      * The uuid of the associated player.
      */
-    val playerId: UUID,
+    val uuid: UID,
 
     /**
      * The position of the associated player on the leaderboard.
@@ -23,17 +22,4 @@ data class LeaderboardResponse(
      * The value on the leaderboard.
      */
     val value: Int
-) {
-    companion object {
-        /**
-         * The codec for this class.
-         */
-        val CODEC = RecordCodecBuilder.create { instance ->
-            instance.group(
-                CustomCodecs.UUID.fieldOf("uuid").forGetter(LeaderboardResponse::playerId),
-                Codec.INT.fieldOf("position").forGetter(LeaderboardResponse::position),
-                Codec.INT.fieldOf("value").forGetter(LeaderboardResponse::value)
-            ).apply(instance, ::LeaderboardResponse)
-        }
-    }
-}
+)

@@ -1,11 +1,9 @@
 package net.mcbrawls.api.database
 
-import com.mojang.serialization.Codec
-import com.mojang.serialization.JsonOps
-import com.mojang.serialization.codecs.RecordCodecBuilder
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import net.mcbrawls.api.file
 import net.mcbrawls.api.runAsync
-import net.mcbrawls.api.toJson
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -59,8 +57,8 @@ object DatabaseController : DatabaseExecutable {
     fun loadConfiguration(): AuthenticatableDatabase {
         val file = file(DATABASE_CONFIG_PATH)
         try {
-            val json = file.toJson()
-            val connectionInfo = ConnectionInfo.CODEC.decode(JsonOps.INSTANCE, json).result().orElseThrow().first
+            val json = file.readText()
+            val connectionInfo = Json.decodeFromString<ConnectionInfo>(json)
             return AuthenticatableDatabase(
                 connectionInfo.address,
                 connectionInfo.database,
@@ -95,26 +93,12 @@ object DatabaseController : DatabaseExecutable {
     /**
      * The information of a database connection.
      */
+    @Serializable
     data class ConnectionInfo(
         val address: String,
         val database: String,
         val user: String,
         val password: String,
         val permissionDatabase: String,
-    ) {
-        companion object {
-            /**
-             * The codec for connection information.
-             */
-            val CODEC: Codec<ConnectionInfo> = RecordCodecBuilder.create { instance ->
-                instance.group(
-                    Codec.STRING.fieldOf("address").forGetter(ConnectionInfo::address),
-                    Codec.STRING.fieldOf("database").forGetter(ConnectionInfo::database),
-                    Codec.STRING.fieldOf("user").forGetter(ConnectionInfo::user),
-                    Codec.STRING.fieldOf("password").forGetter(ConnectionInfo::password),
-                    Codec.STRING.fieldOf("permission_database").forGetter(ConnectionInfo::permissionDatabase)
-                ).apply(instance, DatabaseController::ConnectionInfo)
-            }
-        }
-    }
+    )
 }

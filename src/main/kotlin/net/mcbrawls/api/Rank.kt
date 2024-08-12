@@ -1,10 +1,11 @@
 package net.mcbrawls.api
 
-import com.mojang.serialization.Codec
+import kotlinx.serialization.Serializable
 
 /**
  * Ranks on the MC Brawls Minecraft server.
  */
+@Serializable(with = RankSerializer::class)
 enum class Rank {
     ADMIN,
     BUILDER,
@@ -13,11 +14,4 @@ enum class Rank {
     PARTNER,
     STAFF,
     DEFAULT;
-
-    companion object {
-        /**
-         * The codec for this class.
-         */
-        val CODEC = Codec.STRING.xmap({ Rank.valueOf(it.uppercase()) }, { it.toString().lowercase() })
-    }
 }

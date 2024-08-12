@@ -1,19 +1,18 @@
 package net.mcbrawls.api.response
 
-import com.mojang.serialization.Codec
-import com.mojang.serialization.codecs.RecordCodecBuilder
-import net.mcbrawls.api.CustomCodecs
+import kotlinx.serialization.Serializable
 import net.mcbrawls.api.Rank
-import java.util.UUID
+import net.mcbrawls.api.UID
 
 /**
  * A response for profile-related queries.
  */
+@Serializable
 data class ProfileResponse(
     /**
      * The UUID of the associated player.
      */
-    val playerId: UUID,
+    val uuid: UID,
 
     /**
      * The rank of the associated player.
@@ -24,17 +23,4 @@ data class ProfileResponse(
      * The amount of experience for the associated player.
      */
     val experience: Int
-) {
-    companion object {
-        /**
-         * The codec for this class.
-         */
-        val CODEC = RecordCodecBuilder.create { instance ->
-            instance.group(
-                CustomCodecs.UUID.fieldOf("uuid").forGetter(ProfileResponse::playerId),
-                Rank.CODEC.fieldOf("rank").forGetter(ProfileResponse::rank),
-                Codec.INT.fieldOf("experience").forGetter(ProfileResponse::experience)
-            ).apply(instance, ::ProfileResponse)
-        }
-    }
-}
+)

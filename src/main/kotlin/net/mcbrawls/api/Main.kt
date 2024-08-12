@@ -1,16 +1,13 @@
 package net.mcbrawls.api
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
-import com.mojang.serialization.JsonOps
-import dev.andante.codex.encodeQuick
+import com.mysql.cj.xdevapi.JsonParser
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.data.AuthScheme
 import io.github.smiley4.ktorswaggerui.data.AuthType
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.routing.openApiSpec
 import io.github.smiley4.ktorswaggerui.routing.swaggerUI
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
@@ -30,6 +27,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import net.mcbrawls.api.database.CachedDatabaseValue
 import net.mcbrawls.api.database.DatabaseController
 import net.mcbrawls.api.database.PermissionDatabaseController
@@ -157,24 +157,18 @@ fun main() {
                     // obtain results
                     val uuidToExperienceMap: Map<UUID, Int> = buildMap {
                         while (result.next()) {
-                            try {
+                            runCatching {
                                 val playerId = UUID.fromString(result.getString("player_id"))
                                 val totalExperience = result.getInt("total_experience")
                                 this[playerId] = totalExperience
-                            } catch (_: Exception) {
                             }
                         }
                     }
                     // compile
                     val responses = uuidToExperienceMap.map { (id, xp) -> TotalExperienceResponse(id, xp) }
-                    val json = TotalExperienceResponse.CODEC.listOf().encodeQuick(JsonOps.INSTANCE, responses)
 
-                    if (json == null) {
-                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                        return@get
-                    }
                     // respond
-                    call.respondJson(json)
+                    call.respondJson(Json.encodeToString(responses))
                 }
 
                 get("/experience/{uuid}", {
@@ -229,16 +223,10 @@ fun main() {
                         call.respond(HttpStatusCode.BadRequest, "Player not found: $uuid")
                         return@get
                     }
-                    // compile
-                    val response = TotalExperienceResponse(uuid, experience)
-                    val json = TotalExperienceResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response)
 
-                    if (json == null) {
-                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                        return@get
-                    }
-                    // respond
-                    call.respondJson(json)
+                    val response = TotalExperienceResponse(uuid, experience)
+
+                    call.respondJson(Json.encodeToString(response))
                 }
 
                 get("/chat_statistics", {
@@ -270,16 +258,10 @@ fun main() {
                     result.next()
                     val localMessageCount = result.getInt("local_message_count")
                     val filteredMessageCount = result.getInt("filtered_message_count")
-                    // compile
-                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
-                    val json = MessageCountResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response)
 
-                    if (json == null) {
-                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                        return@get
-                    }
-                    // respond
-                    call.respondJson(json)
+                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
+
+                    call.respondJson(Json.encodeToString(response))
                 }
 
                 get("/chat_statistics/{uuid}", {
@@ -329,16 +311,10 @@ fun main() {
                     result.next()
                     val localMessageCount = result.getInt("local_message_count")
                     val filteredMessageCount = result.getInt("filtered_message_count")
-                    // compile
-                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
-                    val json = MessageCountResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response)
 
-                    if (json == null) {
-                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                        return@get
-                    }
-                    // respond
-                    call.respondJson(json)
+                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
+
+                    call.respondJson(Json.encodeToString(response))
                 }
 
                 get("/leaderboards/{board}", {
@@ -376,17 +352,11 @@ fun main() {
                                 },
                                 size + 1,
                                 result.getInt("value")
-                            )
-                            )
+                            ))
                         }
                     }
-                    val json = LeaderboardResponse.CODEC.listOf().encodeQuick(JsonOps.INSTANCE, results)
-                    if (json == null) {
-                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                        return@get
-                    }
 
-                    call.respondJson(json)
+                    call.respondJson(Json.encodeToString(results))
                 }
 
                 get("/profile/{uuid}", {
@@ -450,10 +420,8 @@ fun main() {
                     }
 
                     val response = ProfileResponse(playerId, rank, experience)
-                    val json = ProfileResponse.CODEC.encodeQuick(JsonOps.INSTANCE, response) ?: run {
-                        call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                        return@get
-                    }
+                    val json = Json.encodeToString(response)
+                    
                     call.respondJson(json)
                 }
             }
@@ -473,22 +441,7 @@ fun file(path: String): File {
     return Path.of(path).toFile()
 }
 
-suspend fun ApplicationCall.respondJson(element: JsonElement) {
-    respondText(element.toJsonString())
-}
-
-fun JsonElement.toJsonString(prettyPrint: Boolean = false): String {
-    val gson = GsonBuilder()
-    if (prettyPrint) {
-        gson.setPrettyPrinting()
-    }
-    return gson.create().toJson(this)
-}
-
-fun File.toJson(): JsonElement? {
-    if (exists() && isFile) {
-        return reader().use(JsonParser::parseReader)
-    }
-
-    return null
+suspend fun ApplicationCall.respondJson(json: String) {
+    response.headers.append(HttpHeaders.ContentType, "application/json")
+    respondText(json)
 }
