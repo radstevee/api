@@ -2,7 +2,6 @@ package net.mcbrawls.api.database
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import java.sql.PreparedStatement
 import java.util.UUID
 

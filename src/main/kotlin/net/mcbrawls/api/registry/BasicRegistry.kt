@@ -91,8 +91,9 @@ open class BasicRegistry<T : Any>(
     /**
      * Suggests all keys in this registry to [builder].
      */
-    fun suggestKeys(builder: SuggestionsBuilder): CompletableFuture<Suggestions> {
-        keys.forEach(builder::suggest)
+    fun suggestKeys(builder: SuggestionsBuilder, filter: ((String) -> Boolean)? = null): CompletableFuture<Suggestions> {
+        val filtered = if (filter != null) keys.filter(filter) else keys
+        filtered.forEach(builder::suggest)
         return builder.buildFuture()
     }
 
