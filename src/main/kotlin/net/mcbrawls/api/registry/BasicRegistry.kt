@@ -5,6 +5,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import com.mojang.serialization.Codec
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
+import kotlin.random.Random
 
 /**
  * A basic string-object registry.
@@ -115,7 +116,7 @@ open class BasicRegistry<T : Any>(
     /**
      * Returns a random entry of the registry.
      */
-    fun random(filter: ((T) -> Boolean)? = null): T {
-        return (if (filter != null) entries.filter(filter) else entries).random()
+    fun random(random: Random = Random, filter: ((T) -> Boolean)? = null): T? {
+        return (if (filter != null) entries.filter(filter) else entries).randomOrNull(random)
     }
 }
