@@ -115,7 +115,7 @@ open class BasicRegistry<T : Any>(
     /**
      * Returns a random entry of the registry.
      */
-    fun random(): T {
-        return entries.random()
+    fun random(filter: ((T) -> Boolean)? = null): T {
+        return (if (filter != null) entries.filter(filter) else entries).random()
     }
 }
