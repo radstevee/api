@@ -288,6 +288,30 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
         }
     )
 
+    val ROCKETS_HIT = register(
+        "rockets_hit",
+        LeaderboardType("Direct Rockets Hit Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        COUNT(player_id) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rocket_spleef' 
+                        AND cause_id = 'rocket_hit'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
     val ROCKET_SPLEEF_SURVIVAL = register(
         "rocket_spleef_survival",
         LeaderboardType("Rocket Spleef Survival Leaderboard") {
