@@ -158,6 +158,8 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                     game_type = 'dodgebolt'
                 GROUP BY
                     player_id
+                HAVING
+                    COUNT(CASE WHEN cause_id = 'kill' THEN 1 END) > 10
                 ORDER BY
                     value DESC
                 LIMIT
