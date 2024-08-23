@@ -98,6 +98,10 @@ open class BasicRegistry<T : Any>(
         return builder.buildFuture()
     }
 
+    fun collectEntries(): List<T> {
+        return entries.toList()
+    }
+
     /**
      * Performs [action] on every registered entry.
      */
