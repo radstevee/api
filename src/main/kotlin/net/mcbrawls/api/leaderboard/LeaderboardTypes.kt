@@ -383,4 +383,172 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
             )
         }
     )
+
+    val RISE_CAPTURE_TIMES_CAPTURED = register(
+        "rise_capture_times_captured",
+        LeaderboardType("Rise Capture Times Captured Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'capture'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
+    val RISE_CAPTURE_TIMES_COLLECTED = register(
+        "rise_capture_times_collected",
+        LeaderboardType("Rise Capture Times Collected Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'capture_collected'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
+    val RISE_CAPTURE_TIMES_CAPTURE_LOST = register(
+        "rise_capture_times_capture_lost",
+        LeaderboardType("Rise Capture Times Capture Lost Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'capture_lost'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
+    val RISE_CAPTURE_GAMES_WON = register(
+        "rise_capture_games_won",
+        LeaderboardType("Rise Capture Games Won Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'win'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
+    val RISE_CAPTURE_GAMES_LOST = register(
+        "rise_capture_games_lost",
+        LeaderboardType("Rise Capture Games Lost Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'loss'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
+    val RISE_CAPTURE_KILLS = register(
+        "rise_capture_kills",
+        LeaderboardType("Rise Capture Kills Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'kill'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
+
+    val RISE_CAPTURE_FALLS = register(
+        "rise_capture_falls",
+        LeaderboardType("Rise Capture Falls Leaderboard") {
+            executeQuery(
+                """
+                    SELECT
+                        player_id,
+                        SUM(experience_amount) value
+                    FROM
+                        StatisticEvents
+                    WHERE
+                        game_type = 'rise_capture' 
+                        AND cause_id = 'fall'
+                    GROUP BY
+                        player_id
+                    ORDER BY
+                        value DESC
+                    LIMIT
+                        10
+                """.trimIndent()
+            )
+        }
+    )
 }
