@@ -391,7 +391,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
@@ -415,7 +415,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
@@ -439,7 +439,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
@@ -463,7 +463,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
@@ -487,7 +487,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
@@ -511,7 +511,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
@@ -535,7 +535,7 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
                 """
                     SELECT
                         player_id,
-                        SUM(experience_amount) value
+                        COUNT(player_id) value
                     FROM
                         StatisticEvents
                     WHERE
