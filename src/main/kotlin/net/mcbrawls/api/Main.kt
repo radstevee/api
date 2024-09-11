@@ -125,187 +125,196 @@ fun main(args: Array<String>) {
 
         // routes
         routing {
-            route("api.json") {
-                openApiSpec()
-            }
-
-            route("docs") {
-                swaggerUI("/api.json")
-            }
-
-            get("/") {
-                call.respond(HttpStatusCode.OK, "MC Brawls API https://api.mcbrawls.net - Docs: https://api.mcbrawls.net/docs")
-            }
-
-            authenticate("auth-basic") {
-                get("/chat_statistics", {
-                    description = "Gets chat statistics for all players who have played on MC Brawls."
-
-                    response {
-                        HttpStatusCode.OK to {
-                            description = "Successful request."
-                            body<List<MessageCountResponse>>()
-                        }
-                    }
-                }) {
-                    val (localMessageCount, filteredMessageCount) = transaction(database) {
-                        val localExpression = (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
-                        val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
-
-                        val localMessageCount = ChatLogs.select(ChatLogs.logId).where(localExpression).count()
-                        val filteredMessageCount = ChatLogs.select(ChatLogs.logId).where(filteredExpression).count()
-
-                        localMessageCount to filteredMessageCount
-                    }
-
-                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
-
-                    call.respondJson(Json.encodeToString(response))
+            route("/v2") {
+                route("api.json") {
+                    openApiSpec()
                 }
 
-                get("/chat_statistics/{uuid}", {
-                    description = "Gets chat statistics for the specified player UUID."
-
-                    request {
-                        pathParameter<String>("uuid")
-                    }
-
-                    objectResponse<MessageCountResponse>()
-                }) {
-                    val uuidString = call.parameters["uuid"]
-
-                    if (uuidString == null) {
-                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: null")
-                        return@get
-                    }
-
-                    try {
-                        UUID.fromString(uuidString)
-                    } catch (exception: IllegalArgumentException) {
-                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: $uuidString")
-                        return@get
-                    }
-
-                    val (localMessageCount, filteredMessageCount) = transaction(database) {
-                        val playerIdCheck = ChatLogs.playerId eq uuidString
-                        val localExpression = (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
-                        val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
-
-                        val localMessageCount = ChatLogs.select(ChatLogs.logId).where(playerIdCheck and localExpression).count()
-                        val filteredMessageCount = ChatLogs.select(ChatLogs.logId).where(playerIdCheck and filteredExpression).count()
-
-                        localMessageCount to filteredMessageCount
-                    }
-
-                    val response = MessageCountResponse(localMessageCount, filteredMessageCount)
-
-                    call.respondJson(Json.encodeToString(response))
+                route("docs") {
+                    swaggerUI("/api.json")
                 }
 
-                get("/leaderboards", {
-                    description = "Retrieves all leaderboard ids."
-
-                    objectResponse<List<String>>()
-                }) {
-                    val leaderboardIds = LeaderboardTypes.collectKeys()
-                    call.respondJson(Json.encodeToString(leaderboardIds))
+                get("/") {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        "MC Brawls API https://api.mcbrawls.net - Docs: https://api.mcbrawls.net/docs"
+                    )
                 }
 
-                get("/leaderboards/{board}", {
-                    description = "Retrieves the leaderboard for the given leaderboard type."
+                authenticate("auth-basic") {
+                    get("/chat_statistics", {
+                        description = "Gets chat statistics for all players who have played on MC Brawls."
 
-                    request {
-                        pathParameter<String>("board") {
-                            description = "The type of leaderboard."
-                        }
-
-                        pathParameter<String>("limit") {
-                            description = "The maximum amount of entries to display."
-                        }
-
-                        pathParameter<String>("offset") {
-                            description = "The offset index for the entries to display from. Requires limit."
-                        }
-                    }
-
-                    objectResponse<List<Leaderboard>>()
-                }) {
-                    val limit = call.parameters["limit"]?.toIntOrNull()
-                    val offset = call.parameters["offset"]?.toLongOrNull()
-
-                    val boardType = runCatching {
-                        val boardId = call.parameters["board"]!!
-                        LeaderboardTypes[boardId]!!
-                    }.getOrElse {
-                        call.respond(HttpStatusCode.BadRequest, "Not a valid leaderboard name")
-                        return@get
-                    }
-
-                    val entries = transaction(database) {
-                        val transaction = this
-                        buildList {
-                            val factory = boardType.queryFactory.invoke(transaction)
-                            val query = factory.createQuery(limit, offset)
-                            query.forEachIndexed { index, row ->
-                                val uuid = runCatching {
-                                    val uuidString = row[StatisticEvents.playerId]
-                                    UUID.fromString(uuidString)
-                                }.getOrElse {
-                                    return@forEachIndexed
-                                }
-
-                                val value = factory.getRowResult(row, Number::class) ?: return@forEachIndexed
-                                add(LeaderboardEntry(uuid, index + 1, value.toLong()))
+                        response {
+                            HttpStatusCode.OK to {
+                                description = "Successful request."
+                                body<List<MessageCountResponse>>()
                             }
                         }
-                    }
+                    }) {
+                        val (localMessageCount, filteredMessageCount) = transaction(database) {
+                            val localExpression =
+                                (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
+                            val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
 
-                    val leaderboard = Leaderboard(boardType.id, boardType.title, entries)
-                    call.respondJson(Json.encodeToString(leaderboard))
-                }
+                            val localMessageCount = ChatLogs.select(ChatLogs.logId).where(localExpression).count()
+                            val filteredMessageCount = ChatLogs.select(ChatLogs.logId).where(filteredExpression).count()
 
-                get("/profile/{uuid}", {
-                    description = "Gets some basic info about the players profile."
-                    request {
-                        pathParameter<String>("uuid")
-                    }
-
-                    objectResponse<Profile>()
-                }) {
-                    val uuidParameter = call.parameters["uuid"]
-                    val (uuidString, uuid) = runCatching {
-                        val uuidString = uuidParameter!!
-                        uuidString to UUID.fromString(uuidString)
-                    }.getOrElse {
-                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid")
-                        return@get
-                    }
-
-                    val rank = transaction(permissionsDatabase) {
-                        val groupResult = LuckPermsPlayers
-                            .select(LuckPermsPlayers.primaryGroup)
-                            .where { LuckPermsPlayers.uuid eq uuidString }
-                            .singleOrNull()?.getOrNull(LuckPermsPlayers.primaryGroup)
-
-                        if (groupResult == null) {
-                            null
-                        } else {
-                            Rank.fromId(groupResult)
+                            localMessageCount to filteredMessageCount
                         }
-                    } ?: Rank.DEFAULT
 
-                    val experience = transaction(database) {
-                        val sum = StatisticEvents.experienceAmount.sum()
-                        StatisticEvents
-                            .select(sum)
-                            .where { StatisticEvents.playerId eq uuidString }
-                            .singleOrNull()?.getOrNull(sum)
-                    } ?: 0
+                        val response = MessageCountResponse(localMessageCount, filteredMessageCount)
 
-                    val response = Profile(uuid, rank, experience)
-                    val json = Json.encodeToString(response)
-                    
-                    call.respondJson(json)
+                        call.respondJson(Json.encodeToString(response))
+                    }
+
+                    get("/chat_statistics/{uuid}", {
+                        description = "Gets chat statistics for the specified player UUID."
+
+                        request {
+                            pathParameter<String>("uuid")
+                        }
+
+                        objectResponse<MessageCountResponse>()
+                    }) {
+                        val uuidString = call.parameters["uuid"]
+
+                        if (uuidString == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: null")
+                            return@get
+                        }
+
+                        try {
+                            UUID.fromString(uuidString)
+                        } catch (exception: IllegalArgumentException) {
+                            call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: $uuidString")
+                            return@get
+                        }
+
+                        val (localMessageCount, filteredMessageCount) = transaction(database) {
+                            val playerIdCheck = ChatLogs.playerId eq uuidString
+                            val localExpression =
+                                (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
+                            val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
+
+                            val localMessageCount =
+                                ChatLogs.select(ChatLogs.logId).where(playerIdCheck and localExpression).count()
+                            val filteredMessageCount =
+                                ChatLogs.select(ChatLogs.logId).where(playerIdCheck and filteredExpression).count()
+
+                            localMessageCount to filteredMessageCount
+                        }
+
+                        val response = MessageCountResponse(localMessageCount, filteredMessageCount)
+
+                        call.respondJson(Json.encodeToString(response))
+                    }
+
+                    get("/leaderboards", {
+                        description = "Retrieves all leaderboard ids."
+
+                        objectResponse<List<String>>()
+                    }) {
+                        val leaderboardIds = LeaderboardTypes.collectKeys()
+                        call.respondJson(Json.encodeToString(leaderboardIds))
+                    }
+
+                    get("/leaderboards/{board}", {
+                        description = "Retrieves the leaderboard for the given leaderboard type."
+
+                        request {
+                            pathParameter<String>("board") {
+                                description = "The type of leaderboard."
+                            }
+
+                            pathParameter<String>("limit") {
+                                description = "The maximum amount of entries to display."
+                            }
+
+                            pathParameter<String>("offset") {
+                                description = "The offset index for the entries to display from. Requires limit."
+                            }
+                        }
+
+                        objectResponse<List<Leaderboard>>()
+                    }) {
+                        val limit = call.parameters["limit"]?.toIntOrNull()
+                        val offset = call.parameters["offset"]?.toLongOrNull()
+
+                        val boardType = runCatching {
+                            val boardId = call.parameters["board"]!!
+                            LeaderboardTypes[boardId]!!
+                        }.getOrElse {
+                            call.respond(HttpStatusCode.BadRequest, "Not a valid leaderboard name")
+                            return@get
+                        }
+
+                        val entries = transaction(database) {
+                            val transaction = this
+                            buildList {
+                                val factory = boardType.queryFactory.invoke(transaction)
+                                val query = factory.createQuery(limit, offset)
+                                query.forEachIndexed { index, row ->
+                                    val uuid = runCatching {
+                                        val uuidString = row[StatisticEvents.playerId]
+                                        UUID.fromString(uuidString)
+                                    }.getOrElse {
+                                        return@forEachIndexed
+                                    }
+
+                                    val value = factory.getRowResult(row, Number::class) ?: return@forEachIndexed
+                                    add(LeaderboardEntry(uuid, index + 1, value.toLong()))
+                                }
+                            }
+                        }
+
+                        val leaderboard = Leaderboard(boardType.id, boardType.title, entries)
+                        call.respondJson(Json.encodeToString(leaderboard))
+                    }
+
+                    get("/profile/{uuid}", {
+                        description = "Gets some basic info about the players profile."
+                        request {
+                            pathParameter<String>("uuid")
+                        }
+
+                        objectResponse<Profile>()
+                    }) {
+                        val uuidParameter = call.parameters["uuid"]
+                        val (uuidString, uuid) = runCatching {
+                            val uuidString = uuidParameter!!
+                            uuidString to UUID.fromString(uuidString)
+                        }.getOrElse {
+                            call.respond(HttpStatusCode.BadRequest, "Not a valid uuid")
+                            return@get
+                        }
+
+                        val rank = transaction(permissionsDatabase) {
+                            val groupResult = LuckPermsPlayers
+                                .select(LuckPermsPlayers.primaryGroup)
+                                .where { LuckPermsPlayers.uuid eq uuidString }
+                                .singleOrNull()?.getOrNull(LuckPermsPlayers.primaryGroup)
+
+                            if (groupResult == null) {
+                                null
+                            } else {
+                                Rank.fromId(groupResult)
+                            }
+                        } ?: Rank.DEFAULT
+
+                        val experience = transaction(database) {
+                            val sum = StatisticEvents.experienceAmount.sum()
+                            StatisticEvents
+                                .select(sum)
+                                .where { StatisticEvents.playerId eq uuidString }
+                                .singleOrNull()?.getOrNull(sum)
+                        } ?: 0
+
+                        val response = Profile(uuid, rank, experience)
+                        val json = Json.encodeToString(response)
+
+                        call.respondJson(json)
+                    }
                 }
             }
         }
