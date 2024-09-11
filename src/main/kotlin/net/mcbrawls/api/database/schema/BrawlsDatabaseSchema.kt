@@ -31,19 +31,6 @@ enum class DbChatMode(val id: String) {
     }
 }
 
-enum class DbChatResult(val id: String) {
-    SUCCESS("success"),
-    INVALID_AUDIENCE("invalid_audience"),
-    MUTED("muted"),
-    FILTERED_PROFANITY("filtered_profanity");
-
-    companion object {
-        private val BY_ID = entries.associateBy(DbChatResult::id)
-
-        fun fromId(id: Any) = BY_ID[id.toString()] ?: throw IllegalArgumentException("Unknown chat result: $id")
-    }
-}
-
 object ApiKeys : Table("ApiKeys") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val apiKey = varchar("api_key", 32)
@@ -57,7 +44,7 @@ object ChatLogs : Table("ChatLogs") {
     val message = text("message")
     val recipients = json<JsonArray>("recipients", jsonConfig)
     val chatMode = customEnumeration("chat_mode", toDb = DbChatMode::id, fromDb = DbChatMode::fromId)
-    val chatResult = customEnumeration("chat_result", toDb = DbChatResult::id, fromDb = DbChatResult::fromId)
+    val chatResult = customEnumeration("chat_result", toDb = ChatResult::id, fromDb = ChatResult::fromId)
     val gameInstanceUuid = varchar("game_instance_uuid", UUID_VARCHAR_LENGTH)
     val partyLeaderUuid = varchar("party_leader_uuid", UUID_VARCHAR_LENGTH)
     val timestamp = timestamp("timestamp")
