@@ -90,7 +90,7 @@ object Partnerships : Table("Partnerships") {
 }
 
 object PlayerCosmetics : Table("PlayerCosmetics") {
-    val playerId = integer(PLAYER_ID_KEY).autoIncrement()
+    val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH).autoIncrement()
     val title = varchar("title", 100)
 }
 
