@@ -25,7 +25,7 @@ data class LeaderboardType(
         private val query: Query,
         private val valueExpression: Expression<*>
     ) {
-        fun createQuery(limit: Int?, offset: Long?): Query {
+        fun createQuery(limit: Int? = null, offset: Long? = null): Query {
             query
                 .groupBy(StatisticEvents.playerId)
                 .orderBy(valueExpression, SortOrder.DESC)
