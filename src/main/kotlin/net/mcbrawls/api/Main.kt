@@ -131,7 +131,7 @@ fun main(args: Array<String>) {
                 }
 
                 route("docs") {
-                    swaggerUI("/api.json")
+                    swaggerUI("/v2/api.json")
                 }
 
                 get("/") {
