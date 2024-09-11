@@ -54,6 +54,7 @@ object ChatLogs : Table("ChatLogs") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val worldId = varchar("world_id", 255)
     val contemporaryUsername = varchar("contemporary_username", 16)
+    val message = text("message")
     val recipients = json<JsonArray>("recipients", jsonConfig)
     val chatMode = customEnumeration("chat_mode", toDb = DbChatMode::id, fromDb = DbChatMode::fromId)
     val chatResult = customEnumeration("chat_result", toDb = DbChatResult::id, fromDb = DbChatResult::fromId)
