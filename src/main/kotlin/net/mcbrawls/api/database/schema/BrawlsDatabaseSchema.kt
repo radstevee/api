@@ -55,19 +55,6 @@ enum class DbPartnerStatus(val id: String) {
     }
 }
 
-enum class DbPunishmentType(val id: String) {
-    WARN("warn"),
-    MUTE("mute"),
-    KICK("kick"),
-    BAN("ban");
-
-    companion object {
-        private val BY_ID = entries.associateBy(DbPunishmentType::id)
-
-        fun fromId(id: Any) = BY_ID[id.toString()] ?: throw IllegalArgumentException("Unknown punishment type: $id")
-    }
-}
-
 object ApiKeys : Table("ApiKeys") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val apiKey = varchar("api_key", 32)
@@ -156,7 +143,7 @@ object Punishments : Table("Punishments") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val contemporaryName = varchar("contemporary_name", 16)
     val officerId = varchar("officer_id", UUID_VARCHAR_LENGTH)
-    val punishmentType = customEnumeration("punishment_type", toDb = DbPunishmentType::id, fromDb = DbPunishmentType::fromId)
+    val punishmentType = customEnumeration("punishment_type", toDb = PunishmentType::id, fromDb = PunishmentType::fromId)
     val reason = text("reason")
     val playerMadeAware = bool("player_made_aware")
     val acknowledged = bool("acknowledged")
