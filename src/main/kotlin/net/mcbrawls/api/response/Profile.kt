@@ -8,7 +8,7 @@ import net.mcbrawls.api.UID
  * A response for profile-related queries.
  */
 @Serializable
-data class ProfileResponse(
+data class Profile(
     /**
      * The UUID of the associated player.
      */

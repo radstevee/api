@@ -1,7 +1,12 @@
 package net.mcbrawls.api.leaderboard
 
-import java.sql.ResultSet
-import java.sql.Statement
+import net.mcbrawls.api.database.schema.StatisticEvents
+import org.jetbrains.exposed.sql.Expression
+import org.jetbrains.exposed.sql.Query
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.Transaction
+import kotlin.reflect.KClass
 
 data class LeaderboardType(
     /**
@@ -12,5 +17,36 @@ data class LeaderboardType(
     /**
      * Provides the leaderboard results.
      */
-    val resultProvider: Statement.() -> ResultSet
-)
+    val queryFactory: Transaction.() -> LeaderboardQueryFactory
+) {
+    val id: String by lazy { LeaderboardTypes[this]!! }
+
+    data class LeaderboardQueryFactory(
+        private val query: Query,
+        private val valueExpression: Expression<*>
+    ) {
+        fun createQuery(limit: Int?, offset: Long?): Query {
+            query
+                .groupBy(StatisticEvents.playerId)
+                .orderBy(valueExpression, SortOrder.DESC)
+
+            if (limit != null) {
+                query.limit(limit, offset ?: 0)
+            }
+
+            return query
+        }
+
+        fun with(queryFunction: (Query) -> Query): LeaderboardQueryFactory {
+            return LeaderboardQueryFactory(
+                queryFunction.invoke(query),
+                valueExpression
+            )
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        fun <T : Any> getRowResult(row: ResultRow, clazz: KClass<T>): T? {
+            return row[valueExpression] as? T
+        }
+    }
+}

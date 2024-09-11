@@ -1,554 +1,250 @@
 package net.mcbrawls.api.leaderboard
 
+import net.mcbrawls.api.caseNoElse
+import net.mcbrawls.api.database.schema.StatisticEvents
+import net.mcbrawls.api.leaderboard.LeaderboardType.LeaderboardQueryFactory
 import net.mcbrawls.api.registry.BasicRegistry
+import org.jetbrains.exposed.sql.Count
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.coalesce
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.div
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
+import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.alias
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.intLiteral
+import org.jetbrains.exposed.sql.sum
 
 object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
     val TOTAL_EXPERIENCE = register(
         "total_experience",
         LeaderboardType("Total Experience Leaderboard") {
-            executeQuery("""
-                SELECT
-                    player_id,
-                    SUM(experience_amount) value
-                FROM
-                    StatisticEvents
-                GROUP BY
-                    player_id
-                ORDER BY
-                    value DESC
-                LIMIT
-                    10
-                """.trimIndent())
+            val valueExpression = StatisticEvents.experienceAmount.sum().alias("value")
+            LeaderboardQueryFactory(
+                StatisticEvents
+                    .select(
+                        StatisticEvents.playerId,
+                        valueExpression
+                    ),
+                valueExpression
+            )
         }
     )
 
     val DODGEBOLT_ROUNDS_WON = register(
         "dodgebolt_rounds_won",
-        LeaderboardType("Dodgebolt Rounds Won Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'dodgebolt' 
-                        AND cause_id = 'round_win' 
-                    GROUP BY 
-                        player_id 
-                    ORDER BY 
-                        value DESC 
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Dodgebolt Rounds Won Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.DODGEBOLT, "round_win")
+        )
     )
 
     val DODGEBOLT_GAMES_WON = register(
         "dodgebolt_games_won",
-        LeaderboardType("Dodgebolt Games Won Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'dodgebolt' 
-                        AND cause_id = 'win' 
-                    GROUP BY 
-                        player_id 
-                    ORDER BY 
-                        value DESC 
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Dodgebolt Games Won Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.DODGEBOLT, "win")
+        )
     )
 
     val DODGEBOLT_KILLS = register(
         "dodgebolt_kills",
-        LeaderboardType("Dodgebolt Kills Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'dodgebolt' 
-                        AND cause_id = 'kill' 
-                    GROUP BY 
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Dodgebolt Kills Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.DODGEBOLT, "kill")
+        )
     )
 
     val DODGEBOLT_DEATHS = register(
         "dodgebolt_deaths",
-        LeaderboardType("Dodgebolt Deaths Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'dodgebolt' 
-                        AND cause_id = 'death' 
-                    GROUP BY 
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Dodgebolt Deaths Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.DODGEBOLT, "death")
+        )
     )
 
     val DODGEBOLT_HIT_RATIO = register(
         "dodgebolt_hit_ratio",
-        LeaderboardType("Dodgebolt Shots Hit / Fired Ratio Leaderboard") {
-            executeQuery("""
-                SELECT
-                    player_id,
-                    COUNT(CASE WHEN cause_id = 'arrow_hit' THEN 1 END) AS shots_hit,
-                    COUNT(CASE WHEN cause_id = 'arrow_fired' THEN 1 END) AS shots_fired,
-                    COALESCE(COUNT(CASE WHEN cause_id = 'arrow_hit' THEN 1 END) / NULLIF(COUNT(CASE WHEN cause_id = 'arrow_fired' THEN 1 END), 0), 0) * 100 AS value
-                FROM
-                    StatisticEvents
-                WHERE
-                    game_type = 'dodgebolt'
-                GROUP BY
-                    player_id
-                HAVING
-                    COUNT(CASE WHEN cause_id = 'arrow_fired' THEN 1 END) > 15
-                ORDER BY
-                    value DESC
-                LIMIT
-                    10
-                """.trimIndent())
-        }
+        LeaderboardType(
+            "Dodgebolt Shots Hit / Fired Ratio Leaderboard",
+            createRatio(LeaderboardGameType.DODGEBOLT, "arrow_hit", "arrow_fired", 30)
+        )
     )
 
     val DODGEBOLT_KILL_DEATH_RATIO = register(
         "dodgebolt_kill_death_ratio",
-        LeaderboardType("Dodgebolt Kill / Death Ratio Leaderboard") {
-            executeQuery("""
-                SELECT
-                    player_id,
-                    COUNT(CASE WHEN cause_id = 'kill' THEN 1 END) AS kills,
-                    COUNT(CASE WHEN cause_id = 'death' THEN 1 END) AS deaths,
-                    COALESCE(COUNT(CASE WHEN cause_id = 'kill' THEN 1 END) / NULLIF(COUNT(CASE WHEN cause_id = 'death' THEN 1 END), 0), 0) * 100 AS value
-                FROM
-                    StatisticEvents
-                WHERE
-                    game_type = 'dodgebolt'
-                GROUP BY
-                    player_id
-                HAVING
-                    COUNT(CASE WHEN cause_id = 'kill' THEN 1 END) > 10
-                ORDER BY
-                    value DESC
-                LIMIT
-                    10
-                """.trimIndent())
-        }
+        LeaderboardType(
+            "Dodgebolt Kill / Death Ratio Leaderboard",
+            createRatio(LeaderboardGameType.DODGEBOLT, "kill", "death", 30)
+        )
     )
 
     val OLD_RISE_SURVIVAL = register(
         "old_rise_survival",
-        LeaderboardType("Rise Survival Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'old_rise' 
-                        AND cause_id = 'outlive' 
-                    GROUP BY 
-                        player_id 
-                    ORDER BY 
-                        value DESC 
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Survival Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE, "outlive")
+        )
     )
 
     val OLD_RISE_ROUNDS_WON = register(
         "old_rise_rounds_won",
-        LeaderboardType("Rise Rounds Won Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'old_rise' 
-                        AND cause_id = 'round_win' 
-                    GROUP BY 
-                        player_id 
-                    ORDER BY 
-                        value DESC 
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Rounds Won Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE, "round_win")
+        )
     )
 
     val OLD_RISE_DEATHS = register(
         "old_rise_deaths",
-        LeaderboardType("Rise Deaths Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'old_rise' 
-                        AND cause_id = 'death' 
-                    GROUP BY 
-                        player_id 
-                    ORDER BY 
-                        value DESC 
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Deaths Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE, "death")
+        )
     )
 
     val OLD_RISE_POWDER_FLOORS = register(
         "old_rise_powder_floors",
-        LeaderboardType("Rise Floor Drops Survived Leaderboard") {
-            executeQuery(
-                """
-                    SELECT 
-                        player_id, 
-                        COUNT(player_id) AS value 
-                    FROM 
-                        StatisticEvents 
-                    WHERE 
-                        game_type = 'old_rise' 
-                        AND cause_id = 'powder_floors' 
-                    GROUP BY 
-                        player_id 
-                    ORDER BY 
-                        value DESC 
-                    LIMIT 
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Floor Drops Survived Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE, "powder_floors")
+        )
     )
 
     val ROCKETS_FIRED = register(
         "rockets_fired",
-        LeaderboardType("Rockets Fired Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rocket_spleef' 
-                        AND cause_id = 'rocket_fired'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rockets Fired Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "rocket_fired")
+        )
     )
 
     val ROCKETS_HIT = register(
         "rockets_hit",
-        LeaderboardType("Direct Rockets Hit Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rocket_spleef' 
-                        AND cause_id = 'rocket_hit'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Direct Rockets Hit Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "rocket_hit")
+        )
     )
 
     val ROCKET_SPLEEF_SURVIVAL = register(
         "rocket_spleef_survival",
-        LeaderboardType("Rocket Spleef Survival Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rocket_spleef' 
-                        AND cause_id = 'outlive'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rocket Spleef Survival Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "outlive")
+        )
     )
 
     val ROCKET_SPLEEF_KILLS = register(
         "rocket_spleef_kills",
-        LeaderboardType("Rocket Spleef Kills Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rocket_spleef' 
-                        AND cause_id = 'kill'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rocket Spleef Kills Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "kill")
+        )
+    )
+
+    val ROCKET_SPLEEF_DEATHS = register(
+        "rocket_spleef_deaths",
+        LeaderboardType(
+            "Rocket Spleef Deaths Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "death")
+        )
     )
 
     val ROCKET_SPLEEF_PLACEMENT = register(
         "rocket_spleef_placement",
-        LeaderboardType("Rocket Spleef Placement Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        SUM(experience_amount) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rocket_spleef' 
-                        AND cause_id = 'placement'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rocket Spleef Placement Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "placement", LeaderboardValueType.EXPERIENCE_SUM)
+        )
     )
 
     val RISE_CAPTURE_TIMES_CAPTURED = register(
         "rise_capture_times_captured",
-        LeaderboardType("Rise Capture Times Captured Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'capture'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Times Captured Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "capture")
+        )
     )
 
     val RISE_CAPTURE_TIMES_COLLECTED = register(
         "rise_capture_times_collected",
-        LeaderboardType("Rise Capture Times Collected Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'capture_collected'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Times Collected Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "capture_collected")
+        )
     )
 
     val RISE_CAPTURE_TIMES_CAPTURE_LOST = register(
         "rise_capture_times_capture_lost",
-        LeaderboardType("Rise Capture Times Capture Lost Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'capture_lost'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Times Capture Lost Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "capture_lost")
+        )
     )
 
     val RISE_CAPTURE_GAMES_WON = register(
         "rise_capture_games_won",
-        LeaderboardType("Rise Capture Games Won Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'win'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Games Won Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "win")
+        )
     )
 
     val RISE_CAPTURE_GAMES_LOST = register(
         "rise_capture_games_lost",
-        LeaderboardType("Rise Capture Games Lost Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'loss'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Games Lost Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "loss")
+        )
     )
 
     val RISE_CAPTURE_KILLS = register(
         "rise_capture_kills",
-        LeaderboardType("Rise Capture Kills Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'kill'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Kills Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "kill")
+        )
     )
 
     val RISE_CAPTURE_FALLS = register(
         "rise_capture_falls",
-        LeaderboardType("Rise Capture Falls Leaderboard") {
-            executeQuery(
-                """
-                    SELECT
-                        player_id,
-                        COUNT(player_id) value
-                    FROM
-                        StatisticEvents
-                    WHERE
-                        game_type = 'rise_capture' 
-                        AND cause_id = 'fall'
-                    GROUP BY
-                        player_id
-                    ORDER BY
-                        value DESC
-                    LIMIT
-                        10
-                """.trimIndent()
-            )
-        }
+        LeaderboardType(
+            "Rise Capture Falls Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "fall")
+        )
     )
+
+    private fun createStatisticsQuery(
+        gameType: LeaderboardGameType,
+        causeId: String,
+        valueType: LeaderboardValueType = LeaderboardValueType.EVENT_COUNT
+    ): Transaction.() -> LeaderboardQueryFactory {
+        return {
+            val function = valueType.leaderboardQuery
+            val factory = function.invoke(this)
+            factory.with { query ->
+                query.where { (StatisticEvents.gameType eq gameType.id) and (StatisticEvents.causeId eq causeId) }
+            }
+        }
+    }
+
+    private fun createRatio(gameType: LeaderboardGameType, numeratorCauseId: String, denominatorCauseId: String, denominatorMinimum: Long): Transaction.() -> LeaderboardQueryFactory {
+        return {
+            val literalZero = intLiteral(0)
+            val literalOne = intLiteral(1)
+
+            val numeratorCount = Count(caseNoElse<Int>().andWhen((StatisticEvents.causeId eq numeratorCauseId), literalOne))
+            val denominatorCount = Count(caseNoElse<Int>().andWhen((StatisticEvents.causeId eq denominatorCauseId), literalOne))
+
+            val value = coalesce(numeratorCount / denominatorCount, literalZero) * 100
+
+            val query = StatisticEvents
+                .select(StatisticEvents.playerId, value)
+                .where { StatisticEvents.gameType eq gameType.id }
+                .having { denominatorCount greater denominatorMinimum }
+
+            LeaderboardQueryFactory(query, value)
+        }
+    }
 }

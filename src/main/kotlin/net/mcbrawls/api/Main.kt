@@ -3,6 +3,7 @@ package net.mcbrawls.api
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.data.AuthScheme
 import io.github.smiley4.ktorswaggerui.data.AuthType
+import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.routing.openApiSpec
 import io.github.smiley4.ktorswaggerui.routing.swaggerUI
@@ -25,23 +26,33 @@ import io.ktor.server.routing.routing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.mcbrawls.api.database.BrawlsDatabaseFactory
 import net.mcbrawls.api.database.CachedDatabaseValue
-import net.mcbrawls.api.database.DatabaseController
-import net.mcbrawls.api.database.PermissionDatabaseController
-import net.mcbrawls.api.database.PreparedStatementBuilder
+import net.mcbrawls.api.database.schema.ApiKeys
+import net.mcbrawls.api.database.schema.ChatLogs
+import net.mcbrawls.api.database.schema.ChatMode
+import net.mcbrawls.api.database.schema.ChatResult
+import net.mcbrawls.api.database.schema.LuckPermsPlayers
+import net.mcbrawls.api.database.schema.StatisticEvents
 import net.mcbrawls.api.leaderboard.LeaderboardTypes
-import net.mcbrawls.api.response.LeaderboardResponse
+import net.mcbrawls.api.response.Leaderboard
+import net.mcbrawls.api.response.LeaderboardEntry
 import net.mcbrawls.api.response.MessageCountResponse
-import net.mcbrawls.api.response.ProfileResponse
-import net.mcbrawls.api.response.TotalExperienceResponse
+import net.mcbrawls.api.response.Profile
+import org.jetbrains.exposed.sql.ComplexExpression
+import org.jetbrains.exposed.sql.Expression
+import org.jetbrains.exposed.sql.QueryBuilder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.append
+import org.jetbrains.exposed.sql.sum
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Path
-import java.sql.PreparedStatement
 import java.util.UUID
 
 private val logger: Logger = LoggerFactory.getLogger("Main")
@@ -49,14 +60,17 @@ private val logger: Logger = LoggerFactory.getLogger("Main")
 /**
  * TODO cache fetched data ([CachedDatabaseValue])
  */
-fun main() {
-    logger.info("Connecting to database.")
-    runBlocking { DatabaseController.connect() }
-    runBlocking { PermissionDatabaseController.connect() }
-    logger.info("Connected.")
-
+fun main(args: Array<String>) {
     logger.info("Starting server")
-    embeddedServer(Netty, port = 37612) {
+
+    val port = args.getOrNull(0)?.toIntOrNull() ?: throw IllegalArgumentException("Port not provided (args[0])")
+    val databaseSchema = args.getOrNull(1) ?: throw IllegalArgumentException("Database schema not provided (args[1])")
+    val permissionsDatabaseSchema = args.getOrNull(2) ?: throw IllegalArgumentException("Permissions database schema not provided (args[2])")
+
+    val database = BrawlsDatabaseFactory.createDatabase(databaseSchema)
+    val permissionsDatabase = BrawlsDatabaseFactory.createDatabase(permissionsDatabaseSchema)
+
+    embeddedServer(Netty, port) {
         install(Authentication) {
             // authentication
             basic("auth-basic") {
@@ -64,16 +78,14 @@ fun main() {
                 validate { credentials ->
                     val id = credentials.name
                     val apiKey = credentials.password
-                    val result = DatabaseController.executePrepared(
-                        { prepareStatement("SELECT * FROM ApiKeys WHERE player_id = ? AND api_key = ?") },
-                        { builder ->
-                            builder.addNext(id, PreparedStatement::setString)
-                            builder.addNext(apiKey, PreparedStatement::setString)
-                        },
-                        PreparedStatement::executeQuery
-                    )
 
-                    if (result.next()) {
+                    val exists = transaction(database) {
+                        ApiKeys.select(
+                            (ApiKeys.playerId eq id) and (ApiKeys.apiKey eq apiKey)
+                        ).any()
+                    }
+
+                    if (exists) {
                         UserIdPrincipal(id)
                     } else {
                         null
@@ -90,8 +102,7 @@ fun main() {
 
             info {
                 title = "MC Brawls API"
-                version = this::class.java.`package`.implementationVersion // somehow this works
-                description = "Official API for the MC Brawls Minecraft server."
+                description = "Official API for MC Brawls."
             }
 
             server {
@@ -127,106 +138,6 @@ fun main() {
             }
 
             authenticate("auth-basic") {
-                get("/experience", {
-                    description = "Gets the experience of every player who has played on MC Brawls."
-
-                    response {
-                        HttpStatusCode.OK to {
-                            description = "Successful request."
-                            body<List<TotalExperienceResponse>>()
-                        }
-
-                        HttpStatusCode.InternalServerError to {
-                            description = "An unexpected error happened on the server."
-                        }
-                    }
-                }) {
-                    // execute query
-                    val result = DatabaseController.executeStatement {
-                        executeQuery(
-                            """
-                                SELECT player_id, SUM(experience_amount) AS total_experience
-                                FROM StatisticEvents
-                                GROUP BY player_id
-                                ORDER BY total_experience DESC
-                            """.trimIndent()
-                        )
-                    }
-                    // obtain results
-                    val uuidToExperienceMap: Map<UUID, Int> = buildMap {
-                        while (result.next()) {
-                            runCatching {
-                                val playerId = UUID.fromString(result.getString("player_id"))
-                                val totalExperience = result.getInt("total_experience")
-                                this[playerId] = totalExperience
-                            }
-                        }
-                    }
-                    // compile
-                    val responses = uuidToExperienceMap.map { (id, xp) -> TotalExperienceResponse(id, xp) }
-
-                    // respond
-                    call.respondJson(Json.encodeToString(responses))
-                }
-
-                get("/experience/{uuid}", {
-                    description = "Gets the total experience for the specified player UUID."
-                    request {
-                        pathParameter<String>("uuid")
-                    }
-
-                    response {
-                        HttpStatusCode.OK to {
-                            description = "Successful request."
-                            body<TotalExperienceResponse>()
-                        }
-
-                        HttpStatusCode.InternalServerError to {
-                            description = "An unexpected error happened on the server."
-                        }
-                    }
-                }) {
-                    val uuidString = call.parameters["uuid"]
-                    val uuid = try {
-                        UUID.fromString(uuidString)
-                    } catch (exception: IllegalArgumentException) {
-                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: $uuidString")
-                        return@get
-                    }
-                    // execute query
-                    val result = DatabaseController.executePrepared(
-                        {
-                            prepareStatement(
-                                """
-                                SELECT SUM(experience_amount) AS total_experience
-                                FROM StatisticEvents
-                                WHERE player_id = ?
-                            """.trimIndent()
-                            )
-                        },
-                        { builder ->
-                            builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
-                        },
-                        PreparedStatement::executeQuery
-                    )
-                    // obtain results
-                    val experience = if (result.next()) {
-                        try {
-                            result.getInt("total_experience")
-                        } catch (exception: Exception) {
-                            call.respond(HttpStatusCode.InternalServerError, "An exception occured on the server")
-                            return@get
-                        }
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, "Player not found: $uuid")
-                        return@get
-                    }
-
-                    val response = TotalExperienceResponse(uuid, experience)
-
-                    call.respondJson(Json.encodeToString(response))
-                }
-
                 get("/chat_statistics", {
                     description = "Gets chat statistics for all players who have played on MC Brawls."
 
@@ -235,27 +146,17 @@ fun main() {
                             description = "Successful request."
                             body<List<MessageCountResponse>>()
                         }
-
-                        HttpStatusCode.InternalServerError to {
-                            description = "An unexpected error happened on the server."
-                        }
                     }
                 }) {
-                    // execute query
-                    val result = DatabaseController.executeStatement {
-                        executeQuery(
-                            """
-                                SELECT
-                                    SUM(chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
-                                    SUM(chat_result = 'filtered_profanity') AS filtered_message_count
-                                FROM ChatLogs
-                            """.trimIndent()
-                        )
+                    val (localMessageCount, filteredMessageCount) = transaction(database) {
+                        val localExpression = (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
+                        val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
+
+                        val localMessageCount = ChatLogs.select(ChatLogs.logId).where(localExpression).count()
+                        val filteredMessageCount = ChatLogs.select(ChatLogs.logId).where(filteredExpression).count()
+
+                        localMessageCount to filteredMessageCount
                     }
-                    // obtain results
-                    result.next()
-                    val localMessageCount = result.getInt("local_message_count")
-                    val filteredMessageCount = result.getInt("filtered_message_count")
 
                     val response = MessageCountResponse(localMessageCount, filteredMessageCount)
 
@@ -269,50 +170,45 @@ fun main() {
                         pathParameter<String>("uuid")
                     }
 
-                    response {
-                        HttpStatusCode.OK to {
-                            description = "Successful request."
-                            body<MessageCountResponse>()
-                        }
-
-                        HttpStatusCode.InternalServerError to {
-                            description = "An unexpected error happened on the server."
-                        }
-                    }
+                    objectResponse<MessageCountResponse>()
                 }) {
                     val uuidString = call.parameters["uuid"]
-                    val uuid = try {
+
+                    if (uuidString == null) {
+                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: null")
+                        return@get
+                    }
+
+                    try {
                         UUID.fromString(uuidString)
                     } catch (exception: IllegalArgumentException) {
                         call.respond(HttpStatusCode.BadRequest, "Not a valid uuid: $uuidString")
                         return@get
                     }
-                    // execute query
-                    val result = DatabaseController.executePrepared(
-                        {
-                            prepareStatement(
-                                """
-                                    SELECT
-                                        SUM(player_id = ? AND chat_mode = 'local' AND chat_result = 'success') AS local_message_count,
-                                        SUM(player_id = ? AND chat_result = 'filtered_profanity') AS filtered_message_count
-                                    FROM ChatLogs
-                                """.trimIndent()
-                            )
-                        },
-                        { builder ->
-                            builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
-                            builder.addNext(uuid, PreparedStatementBuilder::setStatementUuid)
-                        },
-                        PreparedStatement::executeQuery
-                    )
-                    // obtain results
-                    result.next()
-                    val localMessageCount = result.getInt("local_message_count")
-                    val filteredMessageCount = result.getInt("filtered_message_count")
+
+                    val (localMessageCount, filteredMessageCount) = transaction(database) {
+                        val playerIdCheck = ChatLogs.playerId eq uuidString
+                        val localExpression = (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
+                        val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
+
+                        val localMessageCount = ChatLogs.select(ChatLogs.logId).where(playerIdCheck and localExpression).count()
+                        val filteredMessageCount = ChatLogs.select(ChatLogs.logId).where(playerIdCheck and filteredExpression).count()
+
+                        localMessageCount to filteredMessageCount
+                    }
 
                     val response = MessageCountResponse(localMessageCount, filteredMessageCount)
 
                     call.respondJson(Json.encodeToString(response))
+                }
+
+                get("/leaderboards", {
+                    description = "Retrieves all leaderboard ids."
+
+                    objectResponse<List<String>>()
+                }) {
+                    val leaderboardIds = LeaderboardTypes.collectKeys()
+                    call.respondJson(Json.encodeToString(leaderboardIds))
                 }
 
                 get("/leaderboards/{board}", {
@@ -320,41 +216,52 @@ fun main() {
 
                     request {
                         pathParameter<String>("board") {
-                            description = "The type of leaderboard. This can be rockets_fired, total_experience, dodgebolt_rounds_won, old_rise_powder_floors and dodgebolt_hit_ratio"
+                            description = "The type of leaderboard."
+                        }
+
+                        pathParameter<String>("limit") {
+                            description = "The maximum amount of entries to display."
+                        }
+
+                        pathParameter<String>("offset") {
+                            description = "The offset index for the entries to display from. Requires limit."
                         }
                     }
 
-                    response {
-                        HttpStatusCode.OK to {
-                            description = "Successful request."
-                            body<List<LeaderboardResponse>>()
-                        }
-
-                        HttpStatusCode.InternalServerError to {
-                            description = "An unexpected error happened on the server."
-                        }
-                    }
+                    objectResponse<List<Leaderboard>>()
                 }) {
-                    val boardName = call.parameters["board"]
-                    val boardType = LeaderboardTypes[boardName.toString()] ?: run {
-                        call.respond(HttpStatusCode.BadRequest, "Not a valid leaderboard name: $boardName")
+                    val limit = call.parameters["limit"]?.toIntOrNull()
+                    val offset = call.parameters["offset"]?.toLongOrNull()
+
+                    val boardType = runCatching {
+                        val boardId = call.parameters["board"]!!
+                        LeaderboardTypes[boardId]!!
+                    }.getOrElse {
+                        call.respond(HttpStatusCode.BadRequest, "Not a valid leaderboard name")
                         return@get
                     }
-                    val result = DatabaseController.executeStatement(boardType.resultProvider)
-                    val results = buildList {
-                        while (result.next()) {
-                            add(LeaderboardResponse(
-                                runCatching { UUID.fromString(result.getString("player_id")) }.getOrElse {
-                                    call.respond(HttpStatusCode.InternalServerError, "An exception occurred on the server")
-                                    return@get
-                                },
-                                size + 1,
-                                result.getInt("value")
-                            ))
+
+                    val entries = transaction(database) {
+                        val transaction = this
+                        buildList {
+                            val factory = boardType.queryFactory.invoke(transaction)
+                            val query = factory.createQuery(limit, offset)
+                            query.forEachIndexed { index, row ->
+                                val uuid = runCatching {
+                                    val uuidString = row[StatisticEvents.playerId]
+                                    UUID.fromString(uuidString)
+                                }.getOrElse {
+                                    return@forEachIndexed
+                                }
+
+                                val value = factory.getRowResult(row, Number::class) ?: return@forEachIndexed
+                                add(LeaderboardEntry(uuid, index + 1, value.toLong()))
+                            }
                         }
                     }
 
-                    call.respondJson(Json.encodeToString(results))
+                    val leaderboard = Leaderboard(boardType.id, boardType.title, entries)
+                    call.respondJson(Json.encodeToString(leaderboard))
                 }
 
                 get("/profile/{uuid}", {
@@ -363,61 +270,39 @@ fun main() {
                         pathParameter<String>("uuid")
                     }
 
-                    response {
-                        HttpStatusCode.OK to {
-                            description = "Successful request."
-                            body<ProfileResponse>()
-                        }
-
-                        HttpStatusCode.InternalServerError to {
-                            description = "An unexpected error happened on the server."
-                        }
-                    }
+                    objectResponse<Profile>()
                 }) {
-                    val playerId = runCatching { call.parameters["uuid"]?.let(UUID::fromString) }.getOrNull() ?: run {
-                        call.respond(HttpStatusCode.BadRequest, "Invalid specified player UUID!")
+                    val uuidParameter = call.parameters["uuid"]
+                    val (uuidString, uuid) = runCatching {
+                        val uuidString = uuidParameter!!
+                        uuidString to UUID.fromString(uuidString)
+                    }.getOrElse {
+                        call.respond(HttpStatusCode.BadRequest, "Not a valid uuid")
                         return@get
                     }
 
-                    val rankResult = PermissionDatabaseController.executePrepared(
-                        {
-                            prepareStatement(
-                                """
-                                    SELECT primary_group FROM luckperms_players WHERE uuid = ?
-                                """.trimIndent()
-                            )
-                        },
-                        { builder ->
-                            builder.addNext(playerId, PreparedStatementBuilder::setStatementUuid)
-                        },
-                        PreparedStatement::executeQuery
-                    )
+                    val rank = transaction(permissionsDatabase) {
+                        val groupResult = LuckPermsPlayers
+                            .select(LuckPermsPlayers.primaryGroup)
+                            .where { LuckPermsPlayers.uuid eq uuidString }
+                            .singleOrNull()?.getOrNull(LuckPermsPlayers.primaryGroup)
 
-                    rankResult.next()
-                    val rank = runCatching { Rank.valueOf(rankResult.getString("primary_group").uppercase()) }.getOrNull() ?: Rank.DEFAULT
+                        if (groupResult == null) {
+                            null
+                        } else {
+                            Rank.fromId(groupResult)
+                        }
+                    } ?: Rank.DEFAULT
 
-                    val experienceResult = DatabaseController.executePrepared(
-                        {
-                            prepareStatement(
-                                """
-                                SELECT SUM(experience_amount) AS total_experience
-                                FROM StatisticEvents
-                                WHERE player_id = ?
-                            """.trimIndent()
-                            )
-                        },
-                        { builder ->
-                            builder.addNext(playerId, PreparedStatementBuilder::setStatementUuid)
-                        },
-                        PreparedStatement::executeQuery
-                    )
-                    experienceResult.next()
-                    val experience = runCatching { experienceResult.getInt("total_experience") }.getOrElse {
-                        call.respond(HttpStatusCode.BadRequest, "That player does not exist!")
-                        return@get
-                    }
+                    val experience = transaction(database) {
+                        val sum = StatisticEvents.experienceAmount.sum()
+                        StatisticEvents
+                            .select(sum)
+                            .where { StatisticEvents.playerId eq uuidString }
+                            .singleOrNull()?.getOrNull(sum)
+                    } ?: 0
 
-                    val response = ProfileResponse(playerId, rank, experience)
+                    val response = Profile(uuid, rank, experience)
                     val json = Json.encodeToString(response)
                     
                     call.respondJson(json)
@@ -442,4 +327,51 @@ fun file(path: String): File {
 suspend fun ApplicationCall.respondJson(json: String) {
     response.headers.append(HttpHeaders.ContentType, "application/json")
     respondText(json)
+}
+
+class CaseWhenNoElse<T> : Expression<T>(), ComplexExpression {
+    /**
+     * The boolean conditions to check and their resulting expressions if the condition is met.
+     */
+    val cases: MutableList<Pair<Expression<Boolean>, Expression<out T>>> = mutableListOf()
+
+    /**
+     * Adds a conditional expression with a [result] if the expression evaluates to `true`.
+     */
+    fun andWhen(cond: Expression<Boolean>, result: Expression<T>): CaseWhenNoElse<T> {
+        cases.add(cond to result)
+        return this
+    }
+
+    override fun toQueryBuilder(queryBuilder: QueryBuilder) {
+        queryBuilder {
+            append("CASE")
+
+            for ((first, second) in cases) {
+                append(" WHEN ", first, " THEN ", second)
+            }
+
+            append(" END")
+        }
+    }
+}
+
+/**
+ * Compares [value] against any chained conditional expressions.
+ *
+ * If [value] is `null`, chained conditionals will be evaluated separately until the first is evaluated as `true`.
+ */
+fun <T> caseNoElse(): CaseWhenNoElse<T> = CaseWhenNoElse()
+
+inline fun <reified T> OpenApiRoute.objectResponse() {
+    response {
+        HttpStatusCode.OK to {
+            description = "Successful request."
+            body<T>()
+        }
+
+        HttpStatusCode.InternalServerError to {
+            description = "An unexpected error happened on the server."
+        }
+    }
 }

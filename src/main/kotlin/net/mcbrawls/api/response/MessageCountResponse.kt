@@ -10,10 +10,10 @@ data class MessageCountResponse(
     /**
      * The amount of unfiltered, local messages sent.
      */
-    val local: Int,
+    val local: Long,
 
     /**
      * The amount of messages filtered from any chat mode.
      */
-    val filtered: Int
+    val filtered: Long
 )

@@ -4,6 +4,7 @@ import com.mojang.brigadier.suggestion.Suggestions
 import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import com.mojang.serialization.Codec
 import java.util.concurrent.CompletableFuture
+import java.util.function.BiConsumer
 import java.util.function.Consumer
 import kotlin.random.Random
 
@@ -102,11 +103,22 @@ open class BasicRegistry<T : Any>(
         return entries.toList()
     }
 
+    fun collectKeys(): List<String> {
+        return keys.toList()
+    }
+
     /**
      * Performs [action] on every registered entry.
      */
     fun forEach(action: Consumer<T>) {
         entries.forEach(action)
+    }
+
+    /**
+     * Performs [action] on every registered entry.
+     */
+    fun forEachEntry(action: BiConsumer<String, T>) {
+        keyToEntryMap.forEach(action)
     }
 
     /**

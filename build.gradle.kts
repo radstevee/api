@@ -19,6 +19,7 @@ repositories {
 
 dependencies {
     val ktor_version = property("ktor_version")
+    val exposed_version = property("exposed_version")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 
@@ -31,6 +32,12 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.12")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+
+    implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
+    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposed_version")
+    implementation("org.jetbrains.exposed:exposed-json:$exposed_version")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposed_version")
 
     implementation("com.mojang:datafixerupper:7.0.14")
     implementation("com.mojang:brigadier:1.0.18")

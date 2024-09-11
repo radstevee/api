@@ -7,7 +7,7 @@ import net.mcbrawls.api.UID
  * A response for leaderboard-related queries.
  */
 @Serializable
-data class LeaderboardResponse(
+data class LeaderboardEntry(
     /**
      * The uuid of the associated player.
      */
@@ -21,5 +21,5 @@ data class LeaderboardResponse(
     /**
      * The value on the leaderboard.
      */
-    val value: Int
+    val value: Long
 )
