@@ -33,7 +33,7 @@ enum class DbChatMode(val id: String) {
 
 enum class DbChatResult(val id: String) {
     SUCCESS("success"),
-    INVALID_AUDIENCE("invalid_audiencec"),
+    INVALID_AUDIENCE("invalid_audience"),
     MUTED("muted"),
     FILTERED_PROFANITY("filtered_profanity");
 
@@ -41,17 +41,6 @@ enum class DbChatResult(val id: String) {
         private val BY_ID = entries.associateBy(DbChatResult::id)
 
         fun fromId(id: Any) = BY_ID[id.toString()] ?: throw IllegalArgumentException("Unknown chat result: $id")
-    }
-}
-
-enum class DbPartnerStatus(val id: String) {
-    ACTIVE("active"),
-    CANCELLED("cancelled");
-
-    companion object {
-        private val BY_ID = entries.associateBy(DbPartnerStatus::id)
-
-        fun fromId(id: Any) = BY_ID[id.toString()] ?: throw IllegalArgumentException("Unknown partner status: $id")
     }
 }
 
@@ -103,7 +92,7 @@ object Medals : Table("Medals") {
 object Partnerships : Table("Partnerships") {
     val partnerId = integer("partner_id").autoIncrement()
     val partnerName = text("partner_name")
-    val status = customEnumeration("status", toDb = DbPartnerStatus::id, fromDb = DbPartnerStatus::fromId)
+    val status = customEnumeration("status", toDb = PartnerStatus::id, fromDb = PartnerStatus::fromId)
     val createdDate = date("created_date")
     val discordId = varchar("discord_id", 19)
     val partneredUsers = text("partnered_users")
