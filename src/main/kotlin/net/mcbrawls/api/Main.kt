@@ -32,8 +32,8 @@ import net.mcbrawls.api.database.BrawlsDatabaseFactory
 import net.mcbrawls.api.database.CachedDatabaseValue
 import net.mcbrawls.api.database.schema.ApiKeys
 import net.mcbrawls.api.database.schema.ChatLogs
-import net.mcbrawls.api.database.schema.ChatMode
-import net.mcbrawls.api.database.schema.ChatResult
+import net.mcbrawls.api.database.schema.DbChatMode
+import net.mcbrawls.api.database.schema.DbChatResult
 import net.mcbrawls.api.database.schema.LuckPermsPlayers
 import net.mcbrawls.api.database.schema.StatisticEvents
 import net.mcbrawls.api.leaderboard.LeaderboardTypes
@@ -154,8 +154,8 @@ fun main(args: Array<String>) {
                     }) {
                         val (localMessageCount, filteredMessageCount) = transaction(database) {
                             val localExpression =
-                                (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
-                            val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
+                                (ChatLogs.chatMode eq DbChatMode.LOCAL) and (ChatLogs.chatResult eq DbChatResult.SUCCESS)
+                            val filteredExpression = ChatLogs.chatResult eq DbChatResult.FILTERED_PROFANITY
 
                             val localMessageCount = ChatLogs.select(ChatLogs.logId).where(localExpression).count()
                             val filteredMessageCount = ChatLogs.select(ChatLogs.logId).where(filteredExpression).count()
@@ -194,8 +194,8 @@ fun main(args: Array<String>) {
                         val (localMessageCount, filteredMessageCount) = transaction(database) {
                             val playerIdCheck = ChatLogs.playerId eq uuidString
                             val localExpression =
-                                (ChatLogs.chatMode eq ChatMode.LOCAL) and (ChatLogs.chatResult eq ChatResult.SUCCESS)
-                            val filteredExpression = ChatLogs.chatResult eq ChatResult.FILTERED_PROFANITY
+                                (ChatLogs.chatMode eq DbChatMode.LOCAL) and (ChatLogs.chatResult eq DbChatResult.SUCCESS)
+                            val filteredExpression = ChatLogs.chatResult eq DbChatResult.FILTERED_PROFANITY
 
                             val localMessageCount =
                                 ChatLogs.select(ChatLogs.logId).where(playerIdCheck and localExpression).count()
