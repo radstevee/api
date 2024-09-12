@@ -70,8 +70,8 @@ object ChatLogs : Table("ChatLogs") {
     val recipients = json<JsonArray>("recipients", jsonConfig)
     val chatMode = customEnumeration("chat_mode", toDb = DbChatMode::id, fromDb = DbChatMode::fromId)
     val chatResult = customEnumeration("chat_result", toDb = ChatResult::id, fromDb = ChatResult::fromId)
-    val gameInstanceUuid = varchar("game_instance_uuid", UUID_VARCHAR_LENGTH)
-    val partyLeaderUuid = varchar("party_leader_uuid", UUID_VARCHAR_LENGTH)
+    val gameInstanceUuid = varchar("game_instance_uuid", UUID_VARCHAR_LENGTH).nullable()
+    val partyLeaderUuid = varchar("party_leader_uuid", UUID_VARCHAR_LENGTH).nullable()
     val timestamp = timestamp("timestamp")
 }
 
@@ -87,7 +87,7 @@ object GameInstances : Table("GameInstances") {
     val instanceId = integer("instance_id").autoIncrement()
     val uuid = varchar("uuid", UUID_VARCHAR_LENGTH)
     val participants = json<JsonArray>("participants", jsonConfig)
-    val additionalData = json<JsonArray>("additional_data", jsonConfig)
+    val additionalData = json<JsonArray>("additional_data", jsonConfig).nullable()
 }
 
 object IgnoredPlayers : Table("IgnoredPlayers") {
@@ -111,12 +111,12 @@ object Partnerships : Table("Partnerships") {
     val partneredUsers = text("partnered_users")
     val partneredUserIds = text("partnered_user_ids")
     val partneredPlayerIds = text("partnered_player_ids")
-    val notes = text("notes")
+    val notes = text("notes").nullable()
 }
 
 object PlayerCosmetics : Table("PlayerCosmetics") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH).autoIncrement()
-    val title = varchar("title", 100)
+    val title = varchar("title", 100).nullable()
 }
 
 object PlayerReports : Table("PlayerReports") {
@@ -131,7 +131,7 @@ object PlayerReports : Table("PlayerReports") {
 object Players : Table("Players") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val firstJoin = timestamp("first_join")
-    val lastJoin = timestamp("last_join")
+    val lastJoin = timestamp("last_join").nullable()
 }
 
 object PlayerSettings : Table("PlayerSettings") {
@@ -144,9 +144,9 @@ object Punishments : Table("Punishments") {
     val punishmentId = integer("punishment_id").autoIncrement()
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val contemporaryName = varchar("contemporary_name", 16)
-    val officerId = varchar("officer_id", UUID_VARCHAR_LENGTH)
+    val officerId = varchar("officer_id", UUID_VARCHAR_LENGTH).nullable()
     val punishmentType = customEnumeration("punishment_type", toDb = PunishmentType::id, fromDb = PunishmentType::fromId)
-    val reason = text("reason")
+    val reason = text("reason").nullable()
     val playerMadeAware = bool("player_made_aware")
     val acknowledged = bool("acknowledged")
     val timestamp = timestamp("timestamp")
@@ -167,8 +167,8 @@ object StatisticEvents : Table("StatisticEvents") {
     val eventId = integer("event_id").autoIncrement()
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
     val causeId = text("cause_id")
-    val gameType = varchar("game_type", 100)
-    val gameUuid = varchar("game_uuid", UUID_VARCHAR_LENGTH)
+    val gameType = varchar("game_type", 100).nullable()
+    val gameUuid = varchar("game_uuid", UUID_VARCHAR_LENGTH).nullable()
     val experienceAmount = integer("experience_amount")
     val timestamp = timestamp("timestamp")
 }
