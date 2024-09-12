@@ -41,12 +41,8 @@ import net.mcbrawls.api.response.Leaderboard
 import net.mcbrawls.api.response.LeaderboardEntry
 import net.mcbrawls.api.response.MessageCountResponse
 import net.mcbrawls.api.response.Profile
-import org.jetbrains.exposed.sql.ComplexExpression
-import org.jetbrains.exposed.sql.Expression
-import org.jetbrains.exposed.sql.QueryBuilder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.append
 import org.jetbrains.exposed.sql.sum
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
@@ -55,12 +51,12 @@ import java.io.File
 import java.nio.file.Path
 import java.util.UUID
 
-private val logger: Logger = LoggerFactory.getLogger("Main")
-
 /**
  * TODO cache fetched data ([CachedDatabaseValue])
  */
 fun main(args: Array<String>) {
+    val logger: Logger = LoggerFactory.getLogger("Main")
+
     logger.info("Starting server")
 
     val port = args.getOrNull(0)?.toIntOrNull() ?: throw IllegalArgumentException("Port not provided (args[0])")
@@ -337,40 +333,6 @@ suspend fun ApplicationCall.respondJson(json: String) {
     response.headers.append(HttpHeaders.ContentType, "application/json")
     respondText(json)
 }
-
-class CaseWhenNoElse<T> : Expression<T>(), ComplexExpression {
-    /**
-     * The boolean conditions to check and their resulting expressions if the condition is met.
-     */
-    val cases: MutableList<Pair<Expression<Boolean>, Expression<out T>>> = mutableListOf()
-
-    /**
-     * Adds a conditional expression with a [result] if the expression evaluates to `true`.
-     */
-    fun andWhen(cond: Expression<Boolean>, result: Expression<T>): CaseWhenNoElse<T> {
-        cases.add(cond to result)
-        return this
-    }
-
-    override fun toQueryBuilder(queryBuilder: QueryBuilder) {
-        queryBuilder {
-            append("CASE")
-
-            for ((first, second) in cases) {
-                append(" WHEN ", first, " THEN ", second)
-            }
-
-            append(" END")
-        }
-    }
-}
-
-/**
- * Compares [value] against any chained conditional expressions.
- *
- * If [value] is `null`, chained conditionals will be evaluated separately until the first is evaluated as `true`.
- */
-fun <T> caseNoElse(): CaseWhenNoElse<T> = CaseWhenNoElse()
 
 inline fun <reified T> OpenApiRoute.objectResponse() {
     response {

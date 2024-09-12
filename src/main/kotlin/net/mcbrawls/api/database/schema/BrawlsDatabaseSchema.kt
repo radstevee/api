@@ -4,13 +4,38 @@ package net.mcbrawls.api.database.schema
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.json.json
 import org.jetbrains.exposed.sql.kotlin.datetime.date
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.sql.statements.UpdateBuilder
+import org.jetbrains.exposed.sql.statements.UpdateStatement
+import org.jetbrains.exposed.sql.update
 
 private const val PLAYER_ID_KEY = "player_id"
 private const val UUID_VARCHAR_LENGTH = 36
+
+fun <T : Table> T.insertOrUpdate(
+    insertBody: T.(UpdateBuilder<*>) -> Unit,
+    updateWhere: (SqlExpressionBuilder.() -> Op<Boolean>)? = null,
+    updateLimit: Int? = null,
+    updateBody: T.(UpdateStatement) -> Unit
+): Int {
+    val result = insertIgnore(insertBody)
+    val insertedCount = result.insertedCount
+    return if (insertedCount > 0) {
+        insertedCount
+    } else {
+        update(
+            where = updateWhere,
+            limit = updateLimit,
+            body = updateBody
+        )
+    }
+}
 
 val jsonConfig = Json {
     ignoreUnknownKeys = true

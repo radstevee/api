@@ -1,6 +1,6 @@
 package net.mcbrawls.api.leaderboard
 
-import net.mcbrawls.api.caseNoElse
+import net.mcbrawls.api.database.CaseWhenNoElse.Companion.caseNoElse
 import net.mcbrawls.api.database.schema.StatisticEvents
 import net.mcbrawls.api.leaderboard.LeaderboardType.LeaderboardQueryFactory
 import net.mcbrawls.api.registry.BasicRegistry
