@@ -150,7 +150,7 @@ object Punishments : Table("Punishments") {
     val playerMadeAware = bool("player_made_aware")
     val acknowledged = bool("acknowledged")
     val timestamp = timestamp("timestamp")
-    val duration = long("duration")
+    val duration = long("duration").nullable()
 }
 
 object Purchases : Table("Purchases") {
