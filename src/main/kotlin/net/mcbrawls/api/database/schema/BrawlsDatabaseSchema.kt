@@ -86,6 +86,7 @@ object Friends : Table("Friends") {
 object GameInstances : Table("GameInstances") {
     val instanceId = integer("instance_id").autoIncrement()
     val uuid = varchar("uuid", UUID_VARCHAR_LENGTH)
+    val gameType = varchar("game_type", 100)
     val participants = json<JsonArray>("participants", jsonConfig)
     val additionalData = json<JsonArray>("additional_data", jsonConfig).nullable()
 }
