@@ -1,5 +1,7 @@
 package net.mcbrawls.api.database
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
 
 /**
@@ -11,11 +13,15 @@ object BrawlsDatabaseFactory {
      */
     fun createDatabase(schema: String): Database {
         val url = ConnectionConfig.url
-        return Database.connect(
-            url = "jdbc:mysql://$url/$schema",
-            user = ConnectionConfig.username,
-            password = ConnectionConfig.password,
-        )
+        val config = HikariConfig().apply {
+            jdbcUrl = "jdbc:mysql://$url/$schema"
+            driverClassName = "com.mysql.cj.jdbc.Driver"
+            username = ConnectionConfig.username
+            password = ConnectionConfig.password
+            maximumPoolSize = 10
+        }
+
+        return Database.connect(HikariDataSource(config))
     }
 
     private object ConnectionConfig {

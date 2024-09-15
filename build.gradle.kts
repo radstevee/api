@@ -20,6 +20,7 @@ repositories {
 dependencies {
     val ktor_version = property("ktor_version")
     val exposed_version = property("exposed_version")
+    val hikari_version = property("hikari_version")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 
@@ -38,6 +39,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-json:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version")
+    implementation("com.zaxxer:HikariCP:$hikari_version")
 
     implementation("com.mojang:datafixerupper:7.0.14")
     implementation("com.mojang:brigadier:1.0.18")
