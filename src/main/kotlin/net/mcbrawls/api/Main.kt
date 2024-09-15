@@ -130,7 +130,7 @@ fun main(args: Array<String>) {
                     swaggerUI("/v2/api.json")
                 }
 
-                get("/") {
+                get("") {
                     call.respond(
                         HttpStatusCode.OK,
                         "MC Brawls API https://api.mcbrawls.net - Docs: https://api.mcbrawls.net/docs"
@@ -311,6 +311,12 @@ fun main(args: Array<String>) {
 
                         call.respondJson(json)
                     }
+                }
+            }
+
+            route("{...}") {
+                handle {
+                    call.respond(HttpStatusCode.NotFound, "Page not found. Are you using /v2?")
                 }
             }
         }
