@@ -96,6 +96,11 @@ object IgnoredPlayers : Table("IgnoredPlayers") {
     val target = varchar("target", UUID_VARCHAR_LENGTH)
 }
 
+object IpAddresses : Table("IpAddresses") {
+    val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
+    val address = varchar("address", 15)
+}
+
 object Medals : Table("Medals") {
     val id = integer("id").autoIncrement()
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
