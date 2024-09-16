@@ -98,7 +98,7 @@ object IgnoredPlayers : Table("IgnoredPlayers") {
 
 object IpAddresses : Table("IpAddresses") {
     val playerId = varchar(PLAYER_ID_KEY, UUID_VARCHAR_LENGTH)
-    val address = varchar("address", 15)
+    val address = varchar("address", 16)
 }
 
 object Medals : Table("Medals") {
