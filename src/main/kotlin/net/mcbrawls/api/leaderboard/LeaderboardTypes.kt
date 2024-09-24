@@ -143,6 +143,14 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
         )
     )
 
+    val ROCKET_SPLEEF_KILL_ASSISTS = register(
+        "rocket_spleef_kill_assists",
+        LeaderboardType(
+            "Rocket Spleef Kill Assists Leaderboard",
+            createStatisticsQuery(LeaderboardGameType.ROCKET_SPLEEF, "kill_assist")
+        )
+    )
+
     val ROCKET_SPLEEF_DEATHS = register(
         "rocket_spleef_deaths",
         LeaderboardType(
