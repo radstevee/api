@@ -90,13 +90,14 @@ object Friends : Table("Friends") {
 }
 
 object GameInstances : Table("GameInstances") {
-    val instanceId = integer("instance_id").autoIncrement()
     val uuid = varchar("uuid", UUID_VARCHAR_LENGTH)
     val gameType = varchar("game_type", 100).default("unknown")
     val participants = json<JsonArray>("participants", jsonConfig)
     val additionalData = json<JsonArray>("additional_data", jsonConfig).nullable()
+    val startedAt = timestamp("started_at")
+    val endedAt = timestamp("ended_at")
 
-    override val primaryKey = PrimaryKey(instanceId)
+    override val primaryKey = PrimaryKey(uuid)
 }
 
 object IgnoredPlayers : Table("IgnoredPlayers") {
