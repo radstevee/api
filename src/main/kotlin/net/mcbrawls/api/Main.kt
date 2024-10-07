@@ -34,15 +34,21 @@ import net.mcbrawls.api.database.schema.ApiKeys
 import net.mcbrawls.api.database.schema.ChatLogs
 import net.mcbrawls.api.database.schema.ChatResult
 import net.mcbrawls.api.database.schema.DbChatMode
+import net.mcbrawls.api.database.schema.GameInstances
 import net.mcbrawls.api.database.schema.LuckPermsPlayers
+import net.mcbrawls.api.database.schema.Sessions
 import net.mcbrawls.api.database.schema.StatisticEvents
 import net.mcbrawls.api.leaderboard.LeaderboardTypes
 import net.mcbrawls.api.response.Leaderboard
 import net.mcbrawls.api.response.LeaderboardEntry
 import net.mcbrawls.api.response.MessageCountResponse
 import net.mcbrawls.api.response.Profile
+import net.mcbrawls.api.response.Session
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.count
+import org.jetbrains.exposed.sql.leftJoin
 import org.jetbrains.exposed.sql.sum
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
@@ -308,6 +314,36 @@ fun main(args: Array<String>) {
 
                         val response = Profile(uuid, rank, experience)
                         val json = Json.encodeToString(response)
+
+                        call.respondJson(json)
+                    }
+
+                    get("sessions", {
+                        description = "Gets session info."
+                        objectResponse<List<Session>>()
+                    }) {
+                        val sessionInformation = transaction(database) {
+                            val gameInstanceCount = GameInstances.uuid.count().alias("games_played")
+                            Sessions
+                                .leftJoin(
+                                    GameInstances,
+                                    additionalConstraint = { GameInstances.startedAt.greaterEq(Sessions.start) and GameInstances.endedAt.lessEq(Sessions.end) }
+                                )
+                                .select(Sessions.playerId, Sessions.start, Sessions.end, gameInstanceCount)
+                                .groupBy(Sessions.playerId, Sessions.start, Sessions.end)
+                                .map { row ->
+                                    val playerId = row[Sessions.playerId]
+                                    val uuid = UUID.fromString(playerId)
+
+                                    val start = row[Sessions.start]
+                                    val end = row[Sessions.end]
+                                    val count = row[gameInstanceCount]
+
+                                    Session(uuid, start, end, count)
+                                }
+                        }
+
+                        val json = Json.encodeToString(sessionInformation)
 
                         call.respondJson(json)
                     }

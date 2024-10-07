@@ -16,7 +16,7 @@ object UUIDSerializer : KSerializer<UUID> {
     override fun serialize(encoder: Encoder, value: UUID) = encoder.encodeString(value.toString())
 }
 
-typealias UID = @Serializable(with = UUIDSerializer::class) UUID
+typealias SerializableUUID = @Serializable(with = UUIDSerializer::class) UUID
 
 object RankSerializer : KSerializer<Rank> {
     override val descriptor = PrimitiveSerialDescriptor("Rank", PrimitiveKind.STRING)

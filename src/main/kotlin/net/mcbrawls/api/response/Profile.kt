@@ -2,7 +2,7 @@ package net.mcbrawls.api.response
 
 import kotlinx.serialization.Serializable
 import net.mcbrawls.api.Rank
-import net.mcbrawls.api.UID
+import net.mcbrawls.api.SerializableUUID
 
 /**
  * A response for profile-related queries.
@@ -12,7 +12,7 @@ data class Profile(
     /**
      * The UUID of the associated player.
      */
-    val uuid: UID,
+    val uuid: SerializableUUID,
 
     /**
      * The rank of the associated player.
