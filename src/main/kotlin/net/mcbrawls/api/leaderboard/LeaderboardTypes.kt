@@ -1,5 +1,6 @@
 package net.mcbrawls.api.leaderboard
 
+import kotlinx.datetime.toKotlinInstant
 import net.mcbrawls.api.database.CaseWhenNoElse.Companion.caseNoElse
 import net.mcbrawls.api.database.schema.StatisticEvents
 import net.mcbrawls.api.leaderboard.LeaderboardType.LeaderboardQueryFactory
@@ -14,6 +15,8 @@ import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.intLiteral
 import org.jetbrains.exposed.sql.sum
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
     val TOTAL_EXPERIENCE = register(
@@ -221,6 +224,21 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
             "Rise Capture Falls Leaderboard",
             createStatisticsQuery(LeaderboardGameType.RISE_CAPTURE, "fall")
         )
+    )
+
+    val OCTOBER_2024_GIVEAWAY = register(
+        "october_2024_giveaway",
+        LeaderboardType("Kills Leaderboard (discord.mcbrawls.net)") {
+            val factory = LeaderboardValueType.EVENT_COUNT.query(this)
+
+            val zone = ZoneOffset.UTC
+            val startDate = LocalDateTime.of(2024, 10, 7, 0, 0).toInstant(zone).toKotlinInstant()
+            val endDate = LocalDateTime.of(2024, 11, 7, 23, 59, 59).toInstant(zone).toKotlinInstant()
+
+            factory.with { query ->
+                query.where { (StatisticEvents.causeId eq "kill") and (StatisticEvents.timestamp.between(startDate, endDate) ) }
+            }
+        }
     )
 
     private fun createStatisticsQuery(

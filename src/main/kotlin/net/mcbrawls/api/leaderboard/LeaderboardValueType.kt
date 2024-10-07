@@ -36,5 +36,9 @@ enum class LeaderboardValueType(
                 valueExpression
             )
         }
-    )
+    );
+
+    fun query(transaction: Transaction): LeaderboardQueryFactory {
+        return leaderboardQuery.invoke(transaction)
+    }
 }
