@@ -10,7 +10,9 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.coalesce
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.div
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
+import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.intLiteral
@@ -228,7 +230,8 @@ object LeaderboardTypes : BasicRegistry<LeaderboardType>() {
 
     val OCTOBER_2024_GIVEAWAY = register(
         "october_2024_giveaway",
-        LeaderboardType("Kills Leaderboard (discord.mcbrawls.net)") {
+        LeaderboardType("Kills Leaderboard (7th Oct - 7th Nov) (discord.mcbrawls.net)") {
+            addLogger(StdOutSqlLogger)
             val factory = LeaderboardValueType.EVENT_COUNT.query(this)
 
             val zone = ZoneOffset.UTC
