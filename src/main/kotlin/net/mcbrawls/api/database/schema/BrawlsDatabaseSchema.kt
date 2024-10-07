@@ -94,10 +94,18 @@ object GameInstances : Table("GameInstances") {
     val gameType = varchar("game_type", 100).default("unknown")
     val participants = json<JsonArray>("participants", jsonConfig)
     val additionalData = json<JsonArray>("additional_data", jsonConfig).nullable()
+    val removalReason = customEnumeration("removal_reason", toDb = GameRemovalReason::id, fromDb = GameRemovalReason::fromId)
     val startedAt = timestamp("started_at")
     val endedAt = timestamp("ended_at")
 
     override val primaryKey = PrimaryKey(uuid)
+}
+
+object GameParticipants : Table("GameParticipants") {
+    val playerId = reference("player_id", Players.playerId)
+    val instanceUuid = reference("instance_uuid", GameInstances.uuid)
+
+    override val primaryKey: PrimaryKey = PrimaryKey(playerId, instanceUuid)
 }
 
 object IgnoredPlayers : Table("IgnoredPlayers") {
