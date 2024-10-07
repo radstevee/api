@@ -190,6 +190,12 @@ object Purchases : Table("Purchases") {
     override val primaryKey = PrimaryKey(transactionId, packageId)
 }
 
+object Sessions : Table("Sessions") {
+    val playerId = reference(PLAYER_ID_KEY, Players.playerId).index()
+    val start = timestamp("start")
+    val end = timestamp("end")
+}
+
 object StatisticEvents : Table("StatisticEvents") {
     val eventId = integer("event_id").autoIncrement()
     val playerId = reference(PLAYER_ID_KEY, Players.playerId).index()
