@@ -1,7 +1,6 @@
 package net.mcbrawls.api.response
 
 import kotlinx.serialization.Serializable
-import net.mcbrawls.api.Rank
 import net.mcbrawls.api.SerializableUUID
 
 /**

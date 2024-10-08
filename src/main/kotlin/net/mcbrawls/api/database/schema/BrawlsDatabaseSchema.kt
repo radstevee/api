@@ -84,7 +84,7 @@ object Friends : Table("Friends") {
     val initiator = reference("initiator", Players.playerId)
     val recipient = reference("recipient", Players.playerId)
     val since = timestamp("since").defaultExpression(CurrentTimestamp)
-    val mutual = bool("mutual").default(false)
+    val acceptedAt = timestamp("accepted_at").nullable()
 
     override val primaryKey = PrimaryKey(initiator, recipient)
 }
@@ -105,7 +105,7 @@ object GameParticipants : Table("GameParticipants") {
     val playerId = reference("player_id", Players.playerId)
     val instanceUuid = reference("instance_uuid", GameInstances.uuid)
 
-    override val primaryKey: PrimaryKey = PrimaryKey(playerId, instanceUuid)
+    override val primaryKey = PrimaryKey(playerId, instanceUuid)
 }
 
 object IgnoredPlayers : Table("IgnoredPlayers") {
@@ -154,7 +154,9 @@ object PlayerReports : Table("PlayerReports") {
     val offenderId = reference("offender_id", Players.playerId).index()
     val reason = text("reason")
     val timestamp = timestamp("timestamp").defaultExpression(CurrentTimestamp)
-    val resolved = bool("resolved").default(false)
+    val resolvedAt = timestamp("resolved_at").nullable()
+
+    override val primaryKey = PrimaryKey(reporterId)
 }
 
 object Players : Table("Players") {
@@ -180,8 +182,8 @@ object Punishments : Table("Punishments") {
     val officerId = varchar("officer_id", UUID_VARCHAR_LENGTH).nullable()
     val punishmentType = customEnumeration("punishment_type", toDb = PunishmentType::id, fromDb = PunishmentType::fromId)
     val reason = text("reason").nullable()
-    val playerMadeAware = bool("player_made_aware")
-    val acknowledged = bool("acknowledged").default(false)
+    val playerMadeAwareAt = timestamp("player_made_aware_at").nullable()
+    val acknowledgedAt = timestamp("acknowledged_at").nullable()
     val timestamp = timestamp("timestamp").defaultExpression(CurrentTimestamp)
     val duration = long("duration").nullable()
 

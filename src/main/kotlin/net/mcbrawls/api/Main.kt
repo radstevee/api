@@ -23,9 +23,6 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.mcbrawls.api.database.BrawlsDatabaseFactory
@@ -36,25 +33,27 @@ import net.mcbrawls.api.database.schema.ChatResult
 import net.mcbrawls.api.database.schema.DbChatMode
 import net.mcbrawls.api.database.schema.GameInstances
 import net.mcbrawls.api.database.schema.LuckPermsPlayers
+import net.mcbrawls.api.database.schema.Partnerships
 import net.mcbrawls.api.database.schema.Sessions
 import net.mcbrawls.api.database.schema.StatisticEvents
 import net.mcbrawls.api.leaderboard.LeaderboardTypes
 import net.mcbrawls.api.response.Leaderboard
 import net.mcbrawls.api.response.LeaderboardEntry
 import net.mcbrawls.api.response.MessageCountResponse
+import net.mcbrawls.api.response.PartnershipResponse
 import net.mcbrawls.api.response.Profile
+import net.mcbrawls.api.response.Rank
 import net.mcbrawls.api.response.Session
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.leftJoin
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.sum
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.File
-import java.nio.file.Path
 import java.util.UUID
 
 /**
@@ -274,6 +273,15 @@ fun main(args: Array<String>) {
                         call.respondJson(Json.encodeToString(leaderboard))
                     }
 
+                    get("ranks", {
+                        description = "Gets all ranks."
+
+                        objectResponse<Set<Rank>>()
+                    }) {
+                        val json = Json.encodeToString(Rank.entries.toSet())
+                        call.respondJson(json)
+                    }
+
                     get("/profile/{uuid}", {
                         description = "Gets some basic info about the players profile."
                         request {
@@ -347,28 +355,59 @@ fun main(args: Array<String>) {
 
                         call.respondJson(json)
                     }
+
+                    get("partnerships", {
+                        description = "Gets all partnerships."
+                        objectResponse<Set<PartnershipResponse>>()
+                    }) {
+                        val partnerships = transaction(database) {
+                            Partnerships.selectAll()
+                                .mapNotNull { row ->
+                                    runCatching {
+                                        val name = row[Partnerships.partnerName]
+                                        val status = row[Partnerships.status]
+                                        val createdDate = row[Partnerships.createdDate]
+                                        val discordId = row[Partnerships.discordId]
+
+                                        val partneredNames = row[Partnerships.partneredUsers].split(",")
+                                        val partneredUuids =
+                                            row[Partnerships.partneredPlayerIds].split(",").mapNotNull { uuidString ->
+                                                runCatching {
+                                                    UUID.fromString(uuidString)
+                                                }.getOrNull()
+                                            }
+                                        val partneredDiscordIds = row[Partnerships.partneredUserIds].split(",")
+
+                                        val partnerProfiles = partneredNames.mapIndexed { index, partnerName ->
+                                            val uuid = partneredUuids[index]
+                                            val discordUserId = partneredDiscordIds[index]
+                                            PartnershipResponse.Profile(partnerName, uuid, discordUserId)
+                                        }.toSet()
+
+                                        PartnershipResponse(name, status, createdDate, partnerProfiles, discordId)
+                                    }.getOrNull()
+                                }
+                        }
+
+                        val json = Json.encodeToString(partnerships)
+                        call.respondJson(json)
+                    }
+                }
+
+                route("{...}") {
+                    handle {
+                        call.respond(HttpStatusCode.NotFound, "Requested route was not found. See docs at /v2/docs.")
+                    }
                 }
             }
 
             route("{...}") {
                 handle {
-                    call.respond(HttpStatusCode.NotFound, "Page not found. Are you using /v2?")
+                    call.respond(HttpStatusCode.NotFound, "Page not found. Should you be using /v2?")
                 }
             }
         }
     }.start(wait = true)
-}
-
-@Suppress("DeferredResultUnused")
-inline fun runAsync(crossinline block: suspend CoroutineScope.() -> Unit) {
-    GlobalScope.async { block.invoke(this) }
-}
-
-/**
- * Retrieves a file from the run directory.
- */
-fun file(path: String): File {
-    return Path.of(path).toFile()
 }
 
 suspend fun ApplicationCall.respondJson(json: String) {

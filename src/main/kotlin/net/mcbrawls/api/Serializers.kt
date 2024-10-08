@@ -17,11 +17,3 @@ object UUIDSerializer : KSerializer<UUID> {
 }
 
 typealias SerializableUUID = @Serializable(with = UUIDSerializer::class) UUID
-
-object RankSerializer : KSerializer<Rank> {
-    override val descriptor = PrimitiveSerialDescriptor("Rank", PrimitiveKind.STRING)
-
-    override fun deserialize(decoder: Decoder) = Rank.valueOf(decoder.decodeString().uppercase())
-
-    override fun serialize(encoder: Encoder, value: Rank) = encoder.encodeString(value.name.lowercase())
-}
