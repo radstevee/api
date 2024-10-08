@@ -32,6 +32,7 @@ import net.mcbrawls.api.database.schema.ChatLogs
 import net.mcbrawls.api.database.schema.ChatResult
 import net.mcbrawls.api.database.schema.DbChatMode
 import net.mcbrawls.api.database.schema.GameInstances
+import net.mcbrawls.api.database.schema.GameParticipants
 import net.mcbrawls.api.database.schema.LuckPermsPlayers
 import net.mcbrawls.api.database.schema.Partnerships
 import net.mcbrawls.api.database.schema.Sessions
@@ -44,6 +45,7 @@ import net.mcbrawls.api.response.PartnershipResponse
 import net.mcbrawls.api.response.Profile
 import net.mcbrawls.api.response.Rank
 import net.mcbrawls.api.response.Session
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
@@ -334,11 +336,23 @@ fun main(args: Array<String>) {
                             val gameInstanceCount = GameInstances.uuid.count().alias("games_played")
                             Sessions
                                 .leftJoin(
-                                    GameInstances,
-                                    additionalConstraint = { GameInstances.startedAt.greaterEq(Sessions.start) and GameInstances.endedAt.lessEq(Sessions.end) }
+                                    GameParticipants,
+                                    additionalConstraint = { GameParticipants.playerId eq Sessions.playerId }
                                 )
+                                .leftJoin(
+                                    GameInstances,
+                                    additionalConstraint = {
+                                        val on = GameInstances.uuid eq GameParticipants.instanceUuid
+                                        val sessionCheck = GameInstances.startedAt.greaterEq(Sessions.start) and GameInstances.endedAt.lessEq(Sessions.end)
+                                        on and sessionCheck
+                                    }
+                                )
+
                                 .select(Sessions.playerId, Sessions.start, Sessions.end, gameInstanceCount)
+
                                 .groupBy(Sessions.playerId, Sessions.start, Sessions.end)
+                                .orderBy(Sessions.end, SortOrder.DESC)
+
                                 .map { row ->
                                     val playerId = row[Sessions.playerId]
                                     val uuid = UUID.fromString(playerId)
